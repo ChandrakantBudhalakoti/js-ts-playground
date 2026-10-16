@@ -55,6 +55,25 @@ export async function run(page: Page) {
   await page.getByTestId("run-button").click();
 }
 
+/**
+ * Answer the confirmation dialog that is currently open. A dismissed dialog
+ * stays in the DOM while its close animation runs, so a plain
+ * `getByRole("button", { name: "Replace" })` can hit that dying dialog (a
+ * no-op) instead of a newly opened one. Match only the open dialog, then wait
+ * until it has fully closed before continuing.
+ */
+export async function answerDialog(
+  page: Page,
+  button: "Replace" | "Cancel",
+  title?: string,
+) {
+  const dialog = page.locator('[role="alertdialog"][data-state="open"]');
+  await expect(dialog).toBeVisible();
+  if (title) await expect(dialog).toContainText(title);
+  await dialog.getByRole("button", { name: button }).click();
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+}
+
 export function status(page: Page) {
   return page.getByTestId("execution-status");
 }

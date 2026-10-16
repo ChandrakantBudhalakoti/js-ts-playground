@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  answerDialog,
   consoleOutput,
   expectStatus,
   openPlayground,
@@ -124,13 +125,12 @@ test.describe("editor and diagnostics", () => {
       code: "console.log('my work');",
     });
     await page.getByRole("button", { name: "Reset" }).click();
-    await expect(page.getByRole("alertdialog")).toBeVisible();
-    await page.getByRole("button", { name: "Cancel" }).click();
+    await answerDialog(page, "Cancel", "Reset the editor?");
     await expect(
       page.locator(".monaco-editor .view-line").first(),
     ).toContainText("my work");
     await page.getByRole("button", { name: "Reset" }).click();
-    await page.getByRole("button", { name: "Replace" }).click();
+    await answerDialog(page, "Replace", "Reset the editor?");
     await expect(page.locator(".monaco-editor .view-lines")).toContainText(
       'const language = "JavaScript";',
     );

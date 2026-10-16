@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { encodeShareHash } from "../../src/lib/sharing/encode-code";
 import {
+  answerDialog,
   consoleOutput,
   expectStatus,
   openPlayground,
@@ -90,7 +91,7 @@ test.describe("regressions", () => {
     });
     await page.getByRole("button", { name: "Examples" }).click();
     await page.getByRole("menuitem", { name: /JavaScript basics/ }).click();
-    await page.getByRole("button", { name: "Replace" }).click();
+    await answerDialog(page, "Replace", "JavaScript basics");
     await expect(
       page.getByRole("radio", { name: "JavaScript" }),
     ).toHaveAttribute("data-state", "on");
@@ -110,7 +111,7 @@ test.describe("regressions", () => {
     });
     await page.getByRole("button", { name: "Examples" }).click();
     await page.getByRole("menuitem", { name: /JavaScript basics/ }).click();
-    await page.getByRole("button", { name: "Replace" }).click();
+    await answerDialog(page, "Replace", "JavaScript basics");
     await page.getByRole("button", { name: "Undo" }).click();
     await expect(editorLines(page)).toContainText("const mine: number = 2;");
     await expect(
@@ -128,15 +129,13 @@ test.describe("regressions", () => {
     });
 
     await page.evaluate((value) => (window.location.hash = value), hash);
-    await expect(page.getByRole("alertdialog")).toContainText(
-      "Open the shared code?",
-    );
-    await page.getByRole("button", { name: "Cancel" }).click();
+    await answerDialog(page, "Cancel", "Open the shared code?");
     await expect(editorLines(page)).toContainText("console.log('my work');");
     expect(new URL(page.url()).hash).toBe("");
 
+    // Decoding the link is async: wait for the *new* dialog, not the old one.
     await page.evaluate((value) => (window.location.hash = value), hash);
-    await page.getByRole("button", { name: "Replace" }).click();
+    await answerDialog(page, "Replace", "Open the shared code?");
     await expect(editorLines(page)).toContainText(
       "console.log('from a link');",
     );
