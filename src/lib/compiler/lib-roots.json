@@ -1,0 +1,6 @@
+[
+  "lib.es2024.d.ts",
+  "lib.webworker.d.ts",
+  "lib.webworker.iterable.d.ts",
+  "lib.webworker.asynciterable.d.ts"
+]
