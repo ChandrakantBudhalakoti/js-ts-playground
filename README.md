@@ -38,7 +38,7 @@ npm run dev      # http://localhost:3000
 | `npm run build`        | Production build.                                                         |
 | `npm start`            | Serve the production build.                                               |
 | `npm run lint`         | ESLint. Warnings fail the run.                                            |
-| `npm run typecheck`    | `tsc --noEmit` over app, tests and config.                                |
+| `npm run typecheck`    | Generate Next.js route types (`next typegen`), then `tsc --noEmit`.       |
 | `npm run format`       | Format everything with Prettier.                                          |
 | `npm run format:check` | Fail if anything is not Prettier-formatted.                               |
 | `npm test`             | Unit tests (Vitest).                                                      |
