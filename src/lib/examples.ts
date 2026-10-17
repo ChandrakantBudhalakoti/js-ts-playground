@@ -31,6 +31,146 @@ console.log("Users with email:", users.filter((u) => u.email !== undefined).leng
 `,
   },
   {
+    id: "ts-interfaces",
+    title: "Interfaces",
+    description: "Optional, readonly and extended object shapes",
+    language: "typescript",
+    code: `// Interfaces describe the shape of an object.
+interface Address {
+  street: string;
+  city: string;
+  postcode?: string; // optional
+}
+
+interface Person {
+  readonly id: number; // can't be reassigned
+  name: string;
+  address: Address;
+}
+
+// An Employee is a Person with extra fields.
+interface Employee extends Person {
+  role: "engineer" | "designer" | "manager";
+  skills: string[];
+}
+
+// Interfaces can describe functions and dictionaries too.
+interface Formatter {
+  (person: Person): string;
+}
+
+interface Scores {
+  [subject: string]: number;
+}
+
+const formatName: Formatter = (person) => \`\${person.name} (#\${person.id})\`;
+
+const ada: Employee = {
+  id: 1,
+  name: "Ada",
+  address: { street: "12 Analytical Way", city: "London" },
+  role: "engineer",
+  skills: ["math", "programming"],
+};
+
+console.log(formatName(ada));
+console.log(\`\${ada.name} lives in \${ada.address.city}\`);
+console.log("Postcode:", ada.address.postcode ?? "not provided");
+
+const scores: Scores = { math: 98, poetry: 87 };
+for (const [subject, score] of Object.entries(scores)) {
+  console.log(\`\${subject}: \${score}\`);
+}
+
+// A class can promise to implement an interface.
+interface Greeter {
+  greet(): string;
+}
+
+class Robot implements Greeter {
+  constructor(private model: string) {}
+
+  greet() {
+    return \`Beep boop, I am \${this.model}\`;
+  }
+}
+
+console.log(new Robot("RX-78").greet());
+
+// Uncomment a line to see the type checker catch it:
+// ada.id = 2;
+// ada.role = "intern";
+`,
+  },
+  {
+    id: "ts-generics",
+    title: "Generics",
+    description: "Generic functions, constraints and utility types",
+    language: "typescript",
+    code: `// Generics let one function work with many types, without losing type safety.
+function first<T>(items: T[]): T | undefined {
+  return items[0];
+}
+
+const firstNumber = first([10, 20, 30]); // number | undefined
+const firstWord = first(["alpha", "beta"]); // string | undefined
+console.log(firstNumber, firstWord);
+
+// Constraints: T must have a length property.
+function longest<T extends { length: number }>(a: T, b: T): T {
+  return a.length >= b.length ? a : b;
+}
+
+console.log(longest("hello", "hi"));
+console.log(longest([1, 2, 3], [4]));
+
+// keyof: K must be one of T's keys, and the result type follows from it.
+function pluck<T, K extends keyof T>(items: T[], key: K): T[K][] {
+  return items.map((item) => item[key]);
+}
+
+const books = [
+  { title: "Dune", year: 1965 },
+  { title: "Neuromancer", year: 1984 },
+];
+
+console.log(pluck(books, "title")); // string[]
+console.log(pluck(books, "year")); // number[]
+
+// Generic interfaces, with a default type parameter.
+interface Result<T, E = string> {
+  ok: boolean;
+  value?: T;
+  error?: E;
+}
+
+function succeed<T>(value: T): Result<T> {
+  return { ok: true, value };
+}
+
+const result = succeed({ id: 7, title: "Dune" });
+console.log(result.ok, result.value?.title);
+
+// Built-in generic utility types.
+type Book = (typeof books)[number];
+type BookPreview = Pick<Book, "title">;
+type BookDraft = Partial<Book>;
+
+const preview: BookPreview = { title: "Snow Crash" };
+const draft: BookDraft = { year: 1992 };
+const byTitle: Record<string, Book> = Object.fromEntries(
+  books.map((book) => [book.title, book]),
+);
+
+console.log(preview, draft);
+console.log(Object.keys(byTitle));
+
+// Uncomment a line to see the constraints reject it:
+// longest(10, 20);
+// pluck(books, "author");
+`,
+  },
+  {
     id: "js-basics",
     title: "JavaScript basics",
     description: "Variables, functions, loops and console.log",
@@ -189,6 +329,131 @@ setTimeout(() => console.log("Timers are tracked: the run completes after this."
 `,
   },
   {
+    id: "js-array-methods",
+    title: "Array methods",
+    description: "map, filter, reduce, find, toSorted and groupBy",
+    language: "javascript",
+    code: `const orders = [
+  { id: 1, customer: "Ada", total: 42.5, status: "paid" },
+  { id: 2, customer: "Grace", total: 120, status: "pending" },
+  { id: 3, customer: "Linus", total: 15.25, status: "paid" },
+  { id: 4, customer: "Ada", total: 99.99, status: "refunded" },
+];
+
+// Transform: filter keeps items, map changes them, reduce combines them.
+const paidTotals = orders
+  .filter((order) => order.status === "paid")
+  .map((order) => order.total);
+const revenue = paidTotals.reduce((sum, total) => sum + total, 0);
+console.log("Paid totals:", paidTotals);
+console.log("Revenue:", revenue.toFixed(2));
+
+// Search: find, findLast, some and every.
+console.log("First order over 100:", orders.find((o) => o.total > 100)?.id);
+console.log("Ada's last order:", orders.findLast((o) => o.customer === "Ada")?.id);
+console.log("Any pending?", orders.some((o) => o.status === "pending"));
+console.log("All positive?", orders.every((o) => o.total > 0));
+
+// Copy instead of mutating: toSorted and toReversed leave the original alone.
+const largestFirst = orders.toSorted((a, b) => b.total - a.total);
+console.log("Ids by total:", largestFirst.map((o) => o.id));
+console.log("Original order:", orders.map((o) => o.id));
+console.log("Reversed copy:", orders.toReversed().map((o) => o.id));
+
+// Reshape: unique values, grouping, and building arrays.
+const customers = [...new Set(orders.map((o) => o.customer))];
+console.log("Customers:", customers);
+
+const byStatus = Object.groupBy(orders, (o) => o.status);
+console.log("Paid order ids:", byStatus.paid.map((o) => o.id));
+console.log("Last order:", orders.at(-1).id);
+console.log("Evens:", Array.from({ length: 5 }, (_, i) => i * 2));
+`,
+  },
+  {
+    id: "js-async-await",
+    title: "Async/await",
+    description: "Sequential vs. parallel awaits and error handling",
+    language: "javascript",
+    code: `const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// An async function always returns a promise.
+async function loadUser(id) {
+  await sleep(100); // stands in for a network request
+  if (id <= 0) throw new Error(\`No user with id \${id}\`);
+  return { id, name: \`User \${id}\` };
+}
+
+// 1. Sequential: each await waits for the one before it (about 300 ms).
+let start = Date.now();
+for (const id of [1, 2, 3]) {
+  const user = await loadUser(id);
+  console.log("Loaded", user.name);
+}
+const sequentialMs = Date.now() - start;
+
+// 2. Parallel: start every request first, then await them together (about 100 ms).
+start = Date.now();
+const users = await Promise.all([1, 2, 3].map(loadUser));
+const parallelMs = Date.now() - start;
+console.log("Loaded in parallel:", users.map((user) => user.name));
+console.log("Parallel was faster:", parallelMs < sequentialMs);
+
+// 3. A rejected promise throws at the await, so try/catch works.
+try {
+  await loadUser(0);
+} catch (error) {
+  console.warn("Caught:", error.message);
+} finally {
+  console.log("finally runs either way");
+}
+
+// 4. Calling an async function without await gives you the promise.
+const pending = loadUser(4);
+console.log("Is a promise:", pending instanceof Promise);
+console.log("Resolved to:", (await pending).name);
+`,
+  },
+  {
+    id: "js-promises",
+    title: "Promises",
+    description: "Chaining, combinators and event-loop order",
+    language: "javascript",
+    code: `const wait = (ms, value) =>
+  new Promise((resolve) => setTimeout(() => resolve(value), ms));
+const fail = (ms, reason) =>
+  new Promise((_, reject) => setTimeout(() => reject(new Error(reason)), ms));
+
+// Chaining: every then() returns a new promise.
+await wait(50, 2)
+  .then((n) => n * 10)
+  .then((n) => console.log("Chained result:", n))
+  .finally(() => console.log("Chain settled"));
+
+// Combinators wait for several promises at once.
+console.log("all:", await Promise.all([wait(30, "a"), wait(10, "b")]));
+console.log("race:", await Promise.race([wait(30, "slow"), wait(10, "fast")]));
+console.log("any:", await Promise.any([fail(10, "nope"), wait(20, "first success")]));
+
+const settled = await Promise.allSettled([wait(10, "ok"), fail(10, "broken")]);
+for (const result of settled) {
+  const detail = result.status === "fulfilled" ? result.value : result.reason.message;
+  console.log("allSettled:", result.status, detail);
+}
+
+// Promise.withResolvers (ES2024) hands you resolve and reject directly.
+const { promise, resolve } = Promise.withResolvers();
+setTimeout(() => resolve("resolved from a timer"), 10);
+console.log("withResolvers:", await promise);
+
+// Event loop order: synchronous code, then microtasks, then timers.
+setTimeout(() => console.log("4. timer callback (macrotask)"), 0);
+Promise.resolve().then(() => console.log("3. promise callback (microtask)"));
+console.log("1. synchronous code");
+console.log("2. still synchronous");
+`,
+  },
+  {
     id: "js-console",
     title: "Console API tour",
     description: "Levels, groups, counters and tricky values",
@@ -264,6 +529,14 @@ export const DEFAULT_EXAMPLE: Record<Language, CodeExample> = {
   typescript: EXAMPLES.find((e) => e.id === "ts-hello")!,
   javascript: EXAMPLES.find((e) => e.id === "js-basics")!,
 };
+
+/** Query parameter that opens an example in the playground: `/playground?example=<id>`. */
+export const EXAMPLE_PARAM = "example";
+
+/** Link that opens an example in the playground. */
+export function playgroundHref(exampleId: string): string {
+  return `/playground?${EXAMPLE_PARAM}=${encodeURIComponent(exampleId)}`;
+}
 
 export function findExample(id: string): CodeExample | undefined {
   return EXAMPLES.find((example) => example.id === id);
