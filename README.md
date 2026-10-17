@@ -1,9 +1,24 @@
 # JS/TS Playground
 
-A browser-based JavaScript and TypeScript playground built with Next.js. Write
+[![CI](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+A free, open-source online playground for JavaScript and TypeScript. Write
 code in a VS Code-style editor (Monaco), get autocomplete and real TypeScript
-type checking, and run it in an isolated sandbox with a console for output and
-errors.
+type checking, and run it in an isolated browser sandbox with a console for
+output and errors. Nothing to install, no account.
+
+**[Live demo: js-ts-playground-eight.vercel.app](https://js-ts-playground-eight.vercel.app/)**
+· [Open the editor](https://js-ts-playground-eight.vercel.app/playground)
+· [Examples](https://js-ts-playground-eight.vercel.app/examples)
+
+![The playground running a TypeScript example: code in the editor, and the console below showing its output and "Completed in 2 ms"](docs/images/playground.png)
+
+## Demo
+
+![Demo: from the home page, Start Coding opens the editor; a line with a type error is underlined and listed in the Problems panel; after the fix the code runs and a share link is copied](docs/images/demo.gif)
+
+## Features
 
 - **Editor:** Monaco with syntax highlighting, autocomplete, hover, parameter
   hints, bracket matching, Prettier formatting and keyboard shortcuts.
@@ -17,9 +32,35 @@ errors.
 - **Console:** `log`, `info`, `warn`, `error`, `debug`, plus groups, counters
   and timers. It handles circular references safely, renders text only (never
   HTML), and caps output.
-- **Extras:** starter examples, share links (code compressed into the URL hash,
-  no server storage), editor settings, dark and light themes, a mobile layout,
-  and drafts saved in the browser.
+- **Examples:** runnable JavaScript and TypeScript examples in the editor's
+  Examples menu. Any of them opens directly at `/playground?example=<id>`, and
+  five have guide pages that explain them.
+- **Sharing and drafts:** share links keep the code compressed in the URL hash
+  (no server storage), and your draft is saved in the browser.
+- **Extras:** editor settings, dark and light themes and a mobile layout.
+
+### Keyboard shortcuts
+
+| Shortcut          | Action                                      |
+| ----------------- | ------------------------------------------- |
+| `Ctrl/⌘ + Enter`  | Run                                         |
+| `Shift + Alt + F` | Format with Prettier                        |
+| `Ctrl/⌘ + S`      | Save the draft now (it also autosaves)      |
+| `Ctrl/⌘ + Z`      | Undo, including a replaced example or reset |
+
+## Pages
+
+| Route                                             | What it is                                                                                 |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `/`                                               | Landing page: features, how it works, limitations, FAQ                                     |
+| `/playground`                                     | The editor. `?example=<id>` opens an example; `#lang=…&code=…` is a share link             |
+| `/javascript`, `/typescript`                      | What each language supports, the runtime environment, compiler settings and examples       |
+| `/examples`, `/examples/<slug>`                   | All examples, and guides for async/await, array methods, promises, interfaces and generics |
+| `/sandbox`                                        | The page the code runs in (framed by the editor, `X-Robots-Tag: noindex`)                  |
+| `/sitemap.xml`, `/robots.txt`, `/opengraph-image` | Generated sitemap, robots rules and social-sharing image                                   |
+
+Share links created before the editor moved to `/playground` point at
+`/#lang=…&code=…`; the home page forwards them, so they keep working.
 
 ## Quick start
 
@@ -27,7 +68,7 @@ Requirements: Node.js 20.19 or newer (CI uses Node 24, see `.nvmrc`) and npm.
 
 ```bash
 npm install      # also copies Monaco and the TypeScript libs into public/vendor
-npm run dev      # http://localhost:3000
+npm run dev      # http://localhost:3000 (the editor is at /playground)
 ```
 
 ## Scripts
@@ -70,15 +111,23 @@ has already generated the assets, so this is safe.
 ```text
 src/
   app/
-    page.tsx                  Renders <Playground />
-    layout.tsx                Theme, tooltip and toast providers
+    layout.tsx                Site-wide metadata, theme, tooltip and toast providers
+    (site)/                   Content pages with a shared header and footer:
+      page.tsx                  / (landing page)
+      javascript/, typescript/  Language pages
+      examples/                 Example index and one folder per guide
+    playground/page.tsx       The editor: renders <Playground />
     sandbox/route.ts          The sandbox page, with its own strict CSP
+    sitemap.ts, robots.ts     Generated /sitemap.xml and /robots.txt
+    opengraph-image.tsx       Generated social-sharing image
+    not-found.tsx, error.tsx  404 page and error boundary
   components/
-    playground/Playground.tsx Orchestration: document, run flow, sharing, shortcuts
+    playground/Playground.tsx Orchestration: document, run flow, sharing, ?example=, shortcuts
     layout/PlaygroundLayout   Resizable editor/output on desktop, tabs on mobile
     editor/                   CodeEditor (Monaco), toolbar, language, examples, settings, status
     console/                  ConsolePanel, ConsoleEntry
     diagnostics/              ProblemsPanel
+    site/                     Header, footer, guide article and other content-page components
     ui/                       shadcn/ui primitives
   hooks/
     useCodeExecution.ts       Sandbox runtime + console state (batched per frame)
@@ -91,11 +140,19 @@ src/
     console/format.ts         util.inspect-style text formatting, printf substitutions
     monaco/setup.ts           Monaco configuration (TS options, themes, Prettier provider)
     sharing/encode-code.ts    URL-hash share links
+    examples.ts, guides.ts    Runnable examples and the guide pages that explain them
+    site.ts, metadata.ts      Canonical URL, site name, per-page metadata helper
+    content.ts                Landing-page FAQ and copy shared with structured data
   types/playground.ts         Shared types (Language, Diagnostic, ConsoleEntry, RuntimeMessage, ...)
 tests/
-  unit/                       Compiler, diagnostics, serializer, protocol, formatting, sharing
-  e2e/                        Editor, runtime, sharing and mobile tests (Chromium, Firefox, Pixel 7)
+  unit/                       Compiler, diagnostics, serializer, protocol, formatting, sharing, sitemap and content
+  e2e/                        Editor, runtime, sharing, mobile, guides, SEO metadata and accessibility (axe)
 ```
+
+Links into and out of `/playground` are plain `<a>` elements (full page
+loads), not `next/link`. With Cache Components, client-side navigation keeps a
+page mounted but hidden in React's `<Activity>`, and the editor, sandbox and
+URL handling are built for a real mount and unmount.
 
 ### Type checking
 
@@ -148,6 +205,9 @@ server-side execution service.
 
 - No `fs`, `process`, `require` or npm packages: `import` statements can't
   load packages, and the type checker reports them as unresolved.
+- Compiler options are fixed (strict mode, ES2022 output, ES2024 and Web
+  Worker libs; see `src/lib/compiler/options.ts`) and can't be changed in the
+  UI.
 - Code runs in a Web Worker, so there is no `document` or `window` (the editor
   types match this). `self`, `console`, timers, `crypto`, `structuredClone` and
   similar worker APIs are available.
@@ -210,6 +270,47 @@ enough. The vendor assets are generated during the build.
 Never add secrets to `NEXT_PUBLIC_*` variables: they end up in the client
 bundle.
 
+Optional build-time environment variables:
+
+| Variable                   | Purpose                                                                                                                                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SITE_URL`                 | Canonical origin for canonical links, Open Graph URLs and the sitemap. Defaults to `https://js-ts-playground-eight.vercel.app`. Set it on a fork or self-hosted copy with its own domain. |
+| `GOOGLE_SITE_VERIFICATION` | Token for Google Search Console's HTML-tag verification; adds `<meta name="google-site-verification">`.                                                                                   |
+| `NEXT_PUBLIC_SANDBOX_URL`  | Separate sandbox origin (see above).                                                                                                                                                      |
+
+## Search engines
+
+Every page sets its own title, description, canonical URL and Open Graph data
+through `pageMetadata()` in `src/lib/metadata.ts`, and shares one generated
+social image. Preview deployments keep pointing their canonical URLs at
+`SITE_URL`, so only production is treated as the original. `/sitemap.xml`
+lists every indexable page (new guides are added automatically) and
+`/robots.txt` allows crawling and links to it. The landing page includes
+`WebApplication` and `FAQPage` structured data, the language pages `FAQPage`,
+and the guides `BreadcrumbList`; all of it matches what is visible on the page.
+
+`tests/e2e/site.spec.ts` checks the metadata of every page (unique titles and
+descriptions, canonical URLs, one H1), validates the sitemap and robots rules,
+and runs axe accessibility checks in both themes.
+
+### Google Search Console (manual, one time)
+
+A `*.vercel.app` subdomain can't be verified through DNS, so use a
+**URL-prefix** property with the **HTML tag** method:
+
+1. In [Search Console](https://search.google.com/search-console), add a
+   URL-prefix property for `https://js-ts-playground-eight.vercel.app/` and
+   choose _HTML tag_. Copy only the `content` value of the tag.
+2. In Vercel, under _Project → Settings → Environment Variables_, add
+   `GOOGLE_SITE_VERIFICATION` with that value for _Production_, then redeploy
+   (the value is read at build time).
+3. Back in Search Console, press _Verify_.
+4. Under _Sitemaps_, submit `sitemap.xml`.
+5. Optionally use _URL inspection → Request indexing_ for `/`, `/playground`,
+   `/javascript`, `/typescript` and `/examples`.
+
+Bing Webmaster Tools can import the verified site from Search Console.
+
 ## CI and the release gate
 
 `.github/workflows/ci.yml` runs on every pull request and every push to `main`:
@@ -241,3 +342,14 @@ up both of these:
 
 Run `npm run check && npm run test:e2e` locally to reproduce CI before you
 push.
+
+## Contributing
+
+Contributions are welcome: bug reports, new examples, documentation and code.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, conventions and how to add an
+example or guide page. Please report security issues privately as described in
+[SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE)

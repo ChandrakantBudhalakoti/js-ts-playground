@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in the playground or the website doesn't work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Issues are public, so please don't paste secrets or private code.
+        For security vulnerabilities, follow [SECURITY.md](https://github.com/ChandrakantBudhalakoti/js-ts-playground/blob/main/SECURITY.md) instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: |
+        1. Opened the "Promises" example
+        2. Pressed Run
+        3. Expected … but the console showed …
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Code to reproduce
+      description: The smallest code that shows the problem. A share link from the playground works too.
+      render: typescript
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Editor (typing, autocomplete, formatting)
+        - Type checking or the Problems panel
+        - Running code or the console
+        - Share links or saved drafts
+        - Mobile layout
+        - Website pages (home, guides, examples)
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - JavaScript
+        - TypeScript
+        - Both, or not language-specific
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and operating system
+      placeholder: e.g. Firefox 145 on macOS 16
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Errors from the browser's developer console (optional)
+      render: text
