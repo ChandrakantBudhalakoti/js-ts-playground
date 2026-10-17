@@ -34,7 +34,7 @@ test.describe("regressions", () => {
         }),
       ),
     );
-    await page.goto("/");
+    await page.goto("/playground");
     await expect(page.getByTestId("compiler-status")).toHaveAttribute(
       "data-status",
       "ready",
@@ -198,7 +198,7 @@ test.describe("regressions", () => {
   });
 
   test("edits made right before a reload are saved", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/playground");
     await expect(page.locator(".monaco-editor").first()).toBeVisible({
       timeout: 45_000,
     });

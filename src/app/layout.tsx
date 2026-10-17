@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,10 +16,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION?.trim();
+
+// Defaults for every page. Pages set their own title, description, canonical
+// URL and Open Graph data with `pageMetadata()` (src/lib/metadata.ts); no
+// canonical is set here, because pages without one would inherit it.
 export const metadata: Metadata = {
-  title: "JS/TS Playground",
-  description:
-    "Write, type-check and run JavaScript and TypeScript in your browser, in an isolated sandbox.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_TITLE, template: `%s | ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: { type: "website", siteName: SITE_NAME, locale: "en_US" },
+  twitter: { card: "summary_large_image" },
+  ...(googleSiteVerification && {
+    verification: { google: googleSiteVerification },
+  }),
 };
 
 export const viewport: Viewport = {
@@ -35,7 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="h-full overflow-hidden">
+      <body className="min-h-full">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

@@ -214,7 +214,7 @@ test.describe("sharing and persistence", () => {
         }),
       ),
     );
-    await page.goto("/#lang=js&code=@@not-valid@@");
+    await page.goto("/playground#lang=js&code=@@not-valid@@");
     await expect(
       page.getByText("The share link contains invalid characters."),
     ).toBeVisible();
@@ -228,7 +228,7 @@ test.describe("sharing and persistence", () => {
   });
 
   test("the draft survives a reload", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/playground");
     await expect(page.locator(".monaco-editor").first()).toBeVisible({
       timeout: 45_000,
     });

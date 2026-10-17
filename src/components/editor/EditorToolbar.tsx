@@ -25,7 +25,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { GitHubIcon } from "@/components/site/GitHubIcon";
 import type { CompilerState } from "@/lib/compiler/compiler-client";
+import { REPO_URL } from "@/lib/site";
 import type {
   CodeExample,
   EditorSettings,
@@ -127,14 +129,19 @@ export function EditorToolbar(props: EditorToolbarProps) {
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-1.5 border-b bg-background px-2 sm:gap-2 sm:px-3">
-      <div className="flex items-center gap-2 pr-1">
-        <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <Braces className="size-3.5" aria-hidden />
-        </span>
-        <h1 className="sr-only text-sm font-semibold tracking-tight md:not-sr-only">
-          JS/TS Playground
-        </h1>
-      </div>
+      <h1 className="pr-1 text-sm font-semibold tracking-tight">
+        {/* A full page load (not next/link): see PlaygroundLink. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a
+          href="/"
+          className="flex items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Braces className="size-3.5" aria-hidden />
+          </span>
+          <span className="sr-only md:not-sr-only">JS/TS Playground</span>
+        </a>
+      </h1>
 
       <LanguageSelector
         value={props.language}
@@ -168,7 +175,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
                 onClick={onRun}
                 aria-label="Run"
                 data-testid="run-button"
-                className="bg-emerald-600 text-white hover:bg-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                className="bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-800"
               >
                 <Play className="fill-current" aria-hidden />
                 Run
@@ -225,6 +232,22 @@ export function EditorToolbar(props: EditorToolbarProps) {
           settings={props.settings}
           onChange={props.onSettingsChange}
         />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              asChild
+              variant="ghost"
+              size="icon-sm"
+              className="hidden md:inline-flex"
+            >
+              <a href={REPO_URL} aria-label="Source code on GitHub">
+                <GitHubIcon className="size-4" />
+              </a>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Source code on GitHub</TooltipContent>
+        </Tooltip>
       </div>
     </header>
   );
