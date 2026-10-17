@@ -32,6 +32,37 @@ test.describe("mobile layout", () => {
     expect(overflowAfter).toBeLessThanOrEqual(0);
   });
 
+  test("content pages fit the screen and link to the editor", async ({
+    page,
+  }) => {
+    for (const path of [
+      "/",
+      "/javascript",
+      "/typescript",
+      "/examples",
+      "/examples/typescript-generics",
+    ]) {
+      await page.goto(path);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(overflow, path).toBeLessThanOrEqual(0);
+      await expect(
+        page.getByRole("navigation", { name: "Main" }),
+        path,
+      ).toBeVisible();
+    }
+    await page.goto("/");
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: "Start Coding" })
+      .first()
+      .click();
+    await expect(page.getByTestId("run-button")).toBeInViewport({
+      timeout: 45_000,
+    });
+  });
+
   test("secondary actions are in the overflow menu", async ({ page }) => {
     await openPlayground(page, { code: "const  a=1" });
     await page.getByRole("button", { name: "More actions" }).click();
