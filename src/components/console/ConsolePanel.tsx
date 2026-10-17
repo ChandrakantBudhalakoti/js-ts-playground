@@ -35,10 +35,13 @@ export function ConsolePanel({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
         <Terminal className="size-5 opacity-60" aria-hidden />
-        <p>Run your code to see its output here.</p>
-        <p className="text-xs">
-          Press{" "}
-          <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+        <p>
+          Press <span className="font-medium text-foreground">Run</span> to see
+          your code&apos;s output here.
+        </p>
+        <p className="text-xs pointer-coarse:hidden">
+          Or press{" "}
+          <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
             Ctrl/⌘ + Enter
           </kbd>{" "}
           in the editor.
