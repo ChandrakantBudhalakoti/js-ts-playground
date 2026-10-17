@@ -128,6 +128,13 @@
     @apply font-sans;
   }
 }
+/* The playground fills the viewport and scrolls inside its panels; content
+   pages scroll the document as usual. */
+body:has([data-playground]) {
+  height: 100%;
+  overflow: hidden;
+}
+
 /* Monaco renders its own widgets; keep its hover/suggest text on the system UI font. */
 .monaco-editor .suggest-widget,
 .monaco-editor .monaco-hover {

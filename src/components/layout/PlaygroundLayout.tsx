@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Trash2 } from "lucide-react";
+import { Check, Copy, Loader2, Trash2 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -150,7 +150,13 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
     return (
       <div className="flex h-dvh flex-col overflow-hidden">
         {props.toolbar}
-        <div className="flex-1" aria-busy="true" />
+        <div
+          className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground"
+          aria-busy="true"
+        >
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+          Loading editor…
+        </div>
       </div>
     );
   }

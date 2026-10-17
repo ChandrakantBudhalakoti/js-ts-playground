@@ -34,7 +34,12 @@ import { countBySeverity, hasBlockingErrors } from "@/lib/compiler/diagnostics";
 import { FILE_NAMES } from "@/lib/compiler/options";
 import type { CompileResult } from "@/lib/compiler/typescript";
 import { entryToText } from "@/lib/console/format";
-import { DEFAULT_EXAMPLE, isStarterCode } from "@/lib/examples";
+import {
+  DEFAULT_EXAMPLE,
+  EXAMPLE_PARAM,
+  findExample,
+  isStarterCode,
+} from "@/lib/examples";
 import { onFormatError } from "@/lib/monaco/setup";
 import {
   decodeShareHash,
@@ -101,14 +106,26 @@ function parseDraft(value: unknown): CodeDocument | null {
   return { language, code };
 }
 
-function clearHash() {
-  if (window.location.hash) {
-    window.history.replaceState(
-      window.history.state,
-      "",
-      window.location.pathname + window.location.search,
-    );
-  }
+/** The current URL without the document it may carry (share hash, `?example=`). */
+function urlWithoutDocument(): URL {
+  const url = new URL(window.location.href);
+  url.searchParams.delete(EXAMPLE_PARAM);
+  url.hash = "";
+  return url;
+}
+
+/** Remove a document carried in the URL: a share-link hash or `?example=`. */
+function clearUrlDocument() {
+  const hasExample = new URLSearchParams(window.location.search).has(
+    EXAMPLE_PARAM,
+  );
+  if (!window.location.hash && !hasExample) return;
+  const url = urlWithoutDocument();
+  window.history.replaceState(
+    window.history.state,
+    "",
+    url.pathname + url.search,
+  );
 }
 
 function plural(count: number, word: string) {
@@ -144,7 +161,10 @@ export function Playground() {
   const editorRef = useRef<CodeEditorHandle>(null);
   const codeRef = useRef("");
   const languageRef = useRef<Language>("typescript");
-  /** Code loaded from the share hash; the hash is cleared once the user edits it. */
+  /**
+   * Code loaded from the URL (a share link or `?example=`); the URL is
+   * cleared once the user edits it.
+   */
   const sharedCodeRef = useRef<string | null>(null);
   const runToken = useRef(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -189,7 +209,7 @@ export function Playground() {
   const loadDocument = useCallback(
     (doc: CodeDocument, options: { shared?: boolean } = {}) => {
       sharedCodeRef.current = options.shared ? doc.code : null;
-      if (!options.shared) clearHash();
+      if (!options.shared) clearUrlDocument();
       codeRef.current = doc.code;
       languageRef.current = doc.language;
       setLanguage(doc.language);
@@ -201,7 +221,7 @@ export function Playground() {
     [clearDiagnostics, scheduleCheck, saveDraft],
   );
 
-  // Initial document: share link > saved draft > default example.
+  // Initial document: share link > `?example=` > saved draft > default example.
   useEffect(() => {
     let cancelled = false;
     async function init() {
@@ -223,7 +243,23 @@ export function Playground() {
             duration: 8_000,
           },
         );
-        clearHash();
+        clearUrlDocument();
+      }
+      let notice = "Loaded shared code";
+      const exampleId = new URLSearchParams(window.location.search).get(
+        EXAMPLE_PARAM,
+      );
+      if (!doc && !shareError && exampleId !== null) {
+        const example = findExample(exampleId);
+        if (example) {
+          doc = { language: example.language, code: example.code };
+          notice = `Opened “${example.title}”`;
+        } else {
+          toast.error("That example does not exist.", {
+            description: "Your last draft was opened instead.",
+          });
+          clearUrlDocument();
+        }
       }
       const draft = readJson(STORAGE_KEYS.draft, parseDraft);
       const shared = doc;
@@ -238,14 +274,14 @@ export function Playground() {
       setLoaded(true);
       scheduleCheck(doc.code, doc.language, 0);
       if (shared) {
-        // The saved draft is only overwritten once the shared code is edited;
+        // The saved draft is only overwritten once the URL's code is edited;
         // until then it can be brought back.
         const restorable =
           draft && !isStarterCode(draft.code) && draft.code !== shared.code
             ? draft
             : null;
         toast.success(
-          "Loaded shared code",
+          notice,
           restorable
             ? {
                 description: "Your previous draft is still available.",
@@ -283,7 +319,7 @@ export function Playground() {
       codeRef.current = value;
       if (sharedCodeRef.current !== null && value !== sharedCodeRef.current) {
         sharedCodeRef.current = null;
-        clearHash();
+        clearUrlDocument();
       }
       scheduleCheck(value, languageRef.current);
       scheduleSave();
@@ -478,7 +514,7 @@ export function Playground() {
   const dismissReplace = useCallback(() => {
     // Declining a shared link removes it from the URL, so a reload opens the
     // user's own draft rather than the link.
-    if (pendingReplace?.shared) clearHash();
+    if (pendingReplace?.shared) clearUrlDocument();
     setPendingReplace(null);
   }, [pendingReplace]);
 
@@ -501,7 +537,7 @@ export function Playground() {
             ? error.message
             : "The share link could not be opened.",
         );
-        clearHash();
+        clearUrlDocument();
       }
     };
     window.addEventListener("hashchange", onHashChange);
@@ -544,8 +580,11 @@ export function Playground() {
       );
       return;
     }
-    const url = `${window.location.origin}${window.location.pathname}${window.location.search}#${hash}`;
-    window.history.replaceState(window.history.state, "", `#${hash}`);
+    // The hash replaces any `?example=` the page was opened with.
+    const base = urlWithoutDocument();
+    const path = `${base.pathname}${base.search}#${hash}`;
+    const url = `${base.origin}${path}`;
+    window.history.replaceState(window.history.state, "", path);
     sharedCodeRef.current = code;
     const longNote =
       url.length > LONG_URL_WARNING

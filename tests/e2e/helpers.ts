@@ -7,6 +7,20 @@ interface OpenOptions {
   settings?: Partial<EditorSettings>;
   /** Hash fragment to open, e.g. a share link. */
   hash?: string;
+  /** Query string without the `?`, e.g. `example=ts-generics`. */
+  query?: string;
+}
+
+/** Wait until the editor is mounted and the type checker is ready. */
+export async function waitForPlayground(page: Page) {
+  await expect(page.locator(".monaco-editor").first()).toBeVisible({
+    timeout: 45_000,
+  });
+  await expect(page.getByTestId("compiler-status")).toHaveAttribute(
+    "data-status",
+    "ready",
+    { timeout: 45_000 },
+  );
 }
 
 /** Open the playground with a seeded draft/settings and wait until it is interactive. */
@@ -32,15 +46,15 @@ export async function openPlayground(page: Page, options: OpenOptions = {}) {
       settings: options.settings ? { ...options.settings } : null,
     },
   );
-  await page.goto(`/${options.hash ? `#${options.hash}` : ""}`);
-  await expect(page.locator(".monaco-editor").first()).toBeVisible({
-    timeout: 45_000,
-  });
-  await expect(page.getByTestId("compiler-status")).toHaveAttribute(
-    "data-status",
-    "ready",
-    { timeout: 45_000 },
-  );
+  const query = options.query ? `?${options.query}` : "";
+  const hash = options.hash ? `#${options.hash}` : "";
+  await page.goto(`/playground${query}${hash}`);
+  await waitForPlayground(page);
+}
+
+/** The text of each line the user's code logged (system notes excluded). */
+export function loggedLines(page: Page) {
+  return page.locator('[data-testid="console-output"] [data-kind="log"] pre');
 }
 
 /** Replace the editor contents as if pasted. */
