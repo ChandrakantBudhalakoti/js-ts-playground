@@ -48,7 +48,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-      <meta name="google-site-verification" content="yKOHr6XY2H0EL2VwtjjFDZkJFklTn1Ec6zig88enJ1Y" />
+        <meta
+          name="google-site-verification"
+          content="yKOHr6XY2H0EL2VwtjjFDZkJFklTn1Ec6zig88enJ1Y"
+        />
       </head>
       <body className="min-h-full">
         <ThemeProvider
