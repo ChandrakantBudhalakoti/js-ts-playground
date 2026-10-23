@@ -457,7 +457,7 @@ Bing Webmaster Tools can import the verified site from Search Console.
 | Job       | Checks                                                                                                                                                                            |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `quality` | `npm ci` (lockfile must be in sync), ESLint with warnings as errors, `tsc`, Prettier check, unit tests, production build, then `verify-security-headers.mjs` against `next start` |
-| `audit`   | `npm audit --omit=dev --audit-level=high` on production dependencies                                                                                                              |
+| `audit`   | `scripts/audit.mjs`: `npm audit` on production dependencies; any high or critical advisory fails, except the reviewed ones it lists                                               |
 | `e2e`     | All Playwright tests (Chromium, Firefox, phone, tablet) against the production build. Flaky tests fail the run and `test.only` is rejected. Reports are uploaded as artifacts     |
 
 Dependabot (`.github/dependabot.yml`) proposes weekly npm and GitHub Actions
@@ -466,6 +466,14 @@ alone, because they must move together: Monaco bundles its own TypeScript. When
 you upgrade Monaco, set `typescript` to the version Monaco bundles and update
 `EXPECTED_TYPESCRIPT_VERSION` and `MONACO_VERSION`. Unit tests fail if these
 drift.
+
+Monaco 0.57.0 pins `dompurify` 3.4.15, which has advisories up to critical.
+They need DOMPurify options Monaco never sets, and Monaco bundles its own copy
+(so an npm `overrides` entry wouldn't change what the site serves).
+`scripts/audit.mjs` accepts exactly those advisories while `monaco-editor` is
+locked at 0.57.0, with the reasons. Upgrading Monaco turns the exception off,
+so check the audit again and remove the entry once Monaco ships dompurify
+3.4.17 or newer.
 
 CI only stops bad code reaching production if production depends on it. Set
 up both of these:
