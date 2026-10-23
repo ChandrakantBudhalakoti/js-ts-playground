@@ -138,7 +138,7 @@ Share links created before the editor moved to `/playground` point at
 
 ## Quick start
 
-Requirements: Node.js 20.19 or newer (CI uses Node 24, see `.nvmrc`) and npm.
+Requirements: Node.js 22 or newer (CI uses Node 24, see `.nvmrc`) and npm.
 
 ```bash
 npm install      # also copies Monaco, the TypeScript libs and the language runtimes into public/vendor
