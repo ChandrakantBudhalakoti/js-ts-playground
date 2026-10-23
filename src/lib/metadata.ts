@@ -19,7 +19,7 @@ interface PageMetadataInput {
   description: string;
   /** Canonical path, e.g. `/examples/promises`. */
   path: string;
-  /** Use `title` as-is instead of appending " | JS/TS Playground". */
+  /** Use `title` as-is instead of appending " | <site name>". */
   absoluteTitle?: boolean;
 }
 

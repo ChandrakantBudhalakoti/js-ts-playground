@@ -1,23 +1,17 @@
+import { languageForShareCode, languageInfo } from "@/lib/languages";
 import type { Language } from "@/types/playground";
 
 export interface SharedDocument {
   language: Language;
   code: string;
+  /** Standard input for the program, when there is any. */
+  stdin?: string;
 }
 
 /** Largest code (in characters) accepted from a share link. */
 export const MAX_SHARED_CODE_LENGTH = 200_000;
 /** Longest encoded payload we create or accept. Hash fragments never reach the server. */
 export const MAX_SHARE_PAYLOAD_LENGTH = 100_000;
-
-const LANGUAGE_CODES: Record<Language, string> = {
-  javascript: "js",
-  typescript: "ts",
-};
-const CODE_LANGUAGES: Record<string, Language> = {
-  js: "javascript",
-  ts: "typescript",
-};
 
 export class ShareError extends Error {
   constructor(message: string) {
@@ -88,41 +82,33 @@ async function transform(
   return readAll(source, maxBytes);
 }
 
-/** Encode code into a URL hash fragment (without the leading `#`). */
-export async function encodeShareHash(doc: SharedDocument): Promise<string> {
-  if (doc.code.length > MAX_SHARED_CODE_LENGTH) {
-    throw new ShareError("This code is too large to share in a link.");
-  }
-  const raw = new TextEncoder().encode(doc.code);
+async function compress(text: string): Promise<string> {
   const compressed = await transform(
-    raw,
+    new TextEncoder().encode(text),
     new CompressionStream("deflate-raw"),
     Number.MAX_SAFE_INTEGER,
   );
-  const payload = toBase64Url(compressed);
-  if (payload.length > MAX_SHARE_PAYLOAD_LENGTH) {
-    throw new ShareError("This code is too large to share in a link.");
-  }
-  return `lang=${LANGUAGE_CODES[doc.language]}&code=${payload}`;
+  return toBase64Url(compressed);
 }
 
-/**
- * Decode a hash fragment. Returns `null` when the hash is not a share link at
- * all, and throws `ShareError` when it looks like one but is malformed.
- */
-export async function decodeShareHash(
-  hash: string,
-): Promise<SharedDocument | null> {
-  const fragment = hash.startsWith("#") ? hash.slice(1) : hash;
-  if (!fragment) return null;
-  const params = new URLSearchParams(fragment);
-  const payload = params.get("code");
-  if (payload === null) return null;
+/** Encode code into a URL hash fragment (without the leading `#`). */
+export async function encodeShareHash(doc: SharedDocument): Promise<string> {
+  const stdin = doc.stdin ?? "";
+  if (doc.code.length + stdin.length > MAX_SHARED_CODE_LENGTH) {
+    throw new ShareError("This code is too large to share in a link.");
+  }
+  const payload = await compress(doc.code);
+  const input = stdin ? await compress(stdin) : "";
+  if (payload.length + input.length > MAX_SHARE_PAYLOAD_LENGTH) {
+    throw new ShareError("This code is too large to share in a link.");
+  }
+  const hash = `lang=${languageInfo(doc.language).shareCode}&code=${payload}`;
+  return input ? `${hash}&in=${input}` : hash;
+}
 
-  const language = CODE_LANGUAGES[params.get("lang") ?? ""];
-  if (!language)
-    throw new ShareError("The share link has an unknown language.");
-  if (payload.length === 0) return { language, code: "" };
+/** Decode one compressed text parameter of a share link. */
+async function decompress(payload: string): Promise<string> {
+  if (payload.length === 0) return "";
   if (payload.length > MAX_SHARE_PAYLOAD_LENGTH)
     throw new ShareError("The share link is too long.");
 
@@ -139,13 +125,38 @@ export async function decodeShareHash(
     if (error instanceof ShareError) throw error;
     throw new ShareError("The share link is corrupted.");
   }
-  let code: string;
+  let text: string;
   try {
-    code = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
     throw new ShareError("The share link is corrupted.");
   }
-  if (code.length > MAX_SHARED_CODE_LENGTH)
+  if (text.length > MAX_SHARED_CODE_LENGTH)
     throw new ShareError("The shared code is too large.");
-  return { language, code };
+  return text;
+}
+
+/**
+ * Decode a hash fragment. Returns `null` when the hash is not a share link at
+ * all, and throws `ShareError` when it looks like one but is malformed.
+ */
+export async function decodeShareHash(
+  hash: string,
+): Promise<SharedDocument | null> {
+  const fragment = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!fragment) return null;
+  const params = new URLSearchParams(fragment);
+  const payload = params.get("code");
+  if (payload === null) return null;
+
+  const language = languageForShareCode(params.get("lang") ?? "");
+  if (!language)
+    throw new ShareError("The share link has an unknown language.");
+  const code = await decompress(payload);
+  const input = params.get("in");
+  if (!input) return { language, code };
+  const stdin = await decompress(input);
+  if (code.length + stdin.length > MAX_SHARED_CODE_LENGTH)
+    throw new ShareError("The shared code is too large.");
+  return { language, code, stdin };
 }

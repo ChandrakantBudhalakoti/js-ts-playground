@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CircleCheckIcon,
@@ -10,11 +11,16 @@ import {
   Loader2Icon,
 } from "lucide-react";
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ position, ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
+  // On phones the bottom of the screen holds the code keys and the on-screen
+  // keyboard: show notifications at the top, below the toolbar and tabs.
+  const phone = useMediaQuery("(max-width: 639px)") === true;
 
   return (
     <Sonner
+      position={phone ? "top-center" : position}
+      mobileOffset={{ top: 104 }}
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       icons={{

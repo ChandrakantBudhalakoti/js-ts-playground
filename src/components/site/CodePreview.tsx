@@ -1,15 +1,17 @@
 import { CircleCheck } from "lucide-react";
 import { HERO_EXAMPLE } from "@/lib/content";
+import { languageInfo } from "@/lib/languages";
 
 /**
  * A static picture of the playground: real code and the exact line the
  * playground's console prints for it.
  */
 export function CodePreview() {
+  const { name, fileName } = languageInfo(HERO_EXAMPLE.language);
   return (
     <figure className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <figcaption className="sr-only">
-        TypeScript code in the playground editor and the output it prints in the
+        {name} code in the playground editor and the output it prints in the
         console.
       </figcaption>
       <div className="flex items-center gap-2 border-b px-4 py-2.5 text-xs text-muted-foreground">
@@ -18,7 +20,7 @@ export function CodePreview() {
           <span className="size-2.5 rounded-full bg-muted-foreground/30" />
           <span className="size-2.5 rounded-full bg-muted-foreground/30" />
         </span>
-        <span className="ml-2 font-mono">main.ts</span>
+        <span className="ml-2 font-mono">{fileName}</span>
       </div>
       <pre
         tabIndex={0}
@@ -31,7 +33,7 @@ export function CodePreview() {
         <p className="mb-1 text-xs tracking-wide text-muted-foreground uppercase">
           Console
         </p>
-        <p>{HERO_EXAMPLE.output}</p>
+        <p className="whitespace-pre-line">{HERO_EXAMPLE.output}</p>
         <p className="mt-1 flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
           <CircleCheck className="size-3.5" aria-hidden />
           Completed

@@ -1,4 +1,4 @@
-import type { Language } from "@/types/playground";
+import type { ScriptLanguage } from "@/types/playground";
 
 export interface FormatOptions {
   tabWidth: number;
@@ -18,7 +18,7 @@ export class FormatError extends Error {
 /** Format code with Prettier. Prettier and its plugins are loaded on first use. */
 export async function formatCode(
   code: string,
-  language: Language,
+  language: ScriptLanguage,
   options: FormatOptions,
 ): Promise<string> {
   const [prettier, babel, estree, typescript] = await Promise.all([

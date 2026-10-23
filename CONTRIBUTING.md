@@ -1,4 +1,4 @@
-# Contributing to JS/TS Playground
+# Contributing to CodeSlate
 
 Thanks for helping! Bug reports, examples, documentation fixes and code
 changes are all welcome.
@@ -19,7 +19,7 @@ You need Node.js 20.19 or newer (CI uses the version in `.nvmrc`) and npm.
 ```bash
 git clone https://github.com/ChandrakantBudhalakoti/js-ts-playground.git
 cd js-ts-playground
-npm install                              # also copies Monaco and the TypeScript libs into public/vendor
+npm install                              # also copies Monaco, the TypeScript libs and the language runtimes into public/vendor
 npx playwright install chromium firefox  # once, for the browser tests
 npm run dev                              # http://localhost:3000
 ```
@@ -52,6 +52,8 @@ formatting.
 | Toolbar, console, Problems panel   | `src/components/editor`, `src/components/console`, `src/components/diagnostics` |
 | Type checking and compiling        | `src/lib/compiler` (runs in a Web Worker)                                       |
 | How code runs                      | `src/lib/runtime`, `src/app/sandbox/route.ts`                                   |
+| Languages and their runtimes       | `src/lib/languages.ts`, `src/lib/runtime/drivers`, `runtime-assets.json`        |
+| C and C++ compilation              | `src/lib/clang` (Clang runs in a Web Worker of the app)                         |
 | Website pages (home, guides, …)    | `src/app/(site)`, `src/components/site`                                         |
 | Page titles, descriptions, sitemap | `src/lib/metadata.ts`, `src/lib/site.ts`, `src/app/sitemap.ts`                  |
 
@@ -66,6 +68,9 @@ Examples appear in the editor's **Examples** menu and on the `/javascript`,
 1. Add it to `EXAMPLES` in `src/lib/examples.ts` with a unique `id`.
    It must compile without diagnostics (a unit test checks every example; the
    type-errors demo is the only exception).
+   Examples in the other languages go in `src/lib/language-examples.ts`
+   (with `stdin` if they read input) and need a line of their output in
+   `EXPECTED_OUTPUT` in `tests/e2e/languages.spec.ts`, which runs them all.
 2. It can be opened directly at `/playground?example=<id>`.
 
 To also give it a guide page at `/examples/<slug>`:
@@ -85,7 +90,9 @@ Changes near code execution get extra scrutiny. Please don't:
 - loosen the `/sandbox` Content Security Policy or the app's CSP;
 - render console output as HTML;
 - accept messages from the sandbox without the existing origin, channel,
-  run-ID, schema and size checks.
+  run-ID, schema and size checks;
+- let a language runtime reach the network: the runtime worker's `fetch` and
+  `XMLHttpRequest` only answer the runtime's own virtual URLs from memory.
 
 `node scripts/verify-security-headers.mjs <url>` checks the headers of a
 running server; CI runs it against every build.
@@ -95,6 +102,16 @@ running server; CI runs it against every build.
 `monaco-editor` bundles its own TypeScript, so `typescript` must match it.
 See [CI and the release gate](README.md#ci-and-the-release-gate) in the README
 before changing either.
+
+## Upgrading a language runtime
+
+The runtime packages (Pyodide, wasmoon, ruby.wasm, php-wasm, yaegi-wasm,
+webR and YoWASP Clang) are pinned to exact versions, and Dependabot leaves
+them alone: their drivers in `src/lib/runtime/drivers` rely on how those
+builds load and print. To upgrade one, change its version in `package.json`
+and `src/lib/runtime/runtime-assets.json` together (`npm run dev` and a unit
+test fail if they differ), then run `npm run test:e2e`, which runs every
+example of every language in Chromium and the first one in Firefox.
 
 ## License
 

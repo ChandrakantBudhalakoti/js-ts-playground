@@ -26,8 +26,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { GitHubIcon } from "@/components/site/GitHubIcon";
-import type { CompilerState } from "@/lib/compiler/compiler-client";
-import { REPO_URL } from "@/lib/site";
+import type { ToolingStatus } from "@/hooks/useToolingStatus";
+import { REPO_URL, SITE_NAME } from "@/lib/site";
 import type {
   CodeExample,
   EditorSettings,
@@ -50,11 +50,13 @@ interface EditorToolbarProps {
   onRun: () => void;
   onStop: () => void;
   onFormat: () => void;
+  /** Prettier formats JavaScript and TypeScript only. */
+  canFormat: boolean;
   onReset: () => void;
   onShare: () => void;
   settings: EditorSettings;
   onSettingsChange: (patch: Partial<EditorSettings>) => void;
-  compilerState: CompilerState;
+  tooling: ToolingStatus;
 }
 
 function IconAction({
@@ -80,31 +82,38 @@ function IconAction({
   );
 }
 
-function CompilerIndicator({ state }: { state: CompilerState }) {
+/** The current language's checker, compiler or runtime, and its download. */
+function ToolingIndicator({ state }: { state: ToolingStatus }) {
   return (
     <span
       data-testid="compiler-status"
       data-status={state.status}
       className="contents"
     >
-      <CompilerIndicatorContent state={state} />
+      <ToolingIndicatorContent state={state} />
     </span>
   );
 }
 
-function CompilerIndicatorContent({ state }: { state: CompilerState }) {
+function ToolingIndicatorContent({ state }: { state: ToolingStatus }) {
   if (state.status === "ready") {
     return (
       <span className="hidden text-xs text-muted-foreground lg:inline">
-        TypeScript {state.version}
+        {state.label}
       </span>
     );
   }
   if (state.status === "loading") {
+    const percent =
+      state.progress === null ? null : Math.round(state.progress * 100);
     return (
-      <span className="hidden items-center gap-1 text-xs text-muted-foreground lg:flex">
+      <span
+        className="flex items-center gap-1 text-xs text-muted-foreground"
+        title={`Downloading ${state.label}`}
+      >
         <Loader2 className="size-3 animate-spin" aria-hidden />
-        Loading TypeScript…
+        <span className="hidden lg:inline">Loading {state.label}…</span>
+        {percent !== null && <span className="tabular-nums">{percent}%</span>}
       </span>
     );
   }
@@ -116,7 +125,7 @@ function CompilerIndicatorContent({ state }: { state: CompilerState }) {
           tabIndex={0}
         >
           <CircleAlert className="size-3.5" aria-hidden />
-          <span className="hidden lg:inline">Type checking unavailable</span>
+          <span className="hidden lg:inline">{state.label}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">{state.message}</TooltipContent>
@@ -125,7 +134,10 @@ function CompilerIndicatorContent({ state }: { state: CompilerState }) {
 }
 
 export function EditorToolbar(props: EditorToolbarProps) {
-  const { busy, onRun, onStop, onFormat, onReset, onShare } = props;
+  const { busy, onRun, onStop, onFormat, canFormat, onReset, onShare } = props;
+  const formatLabel = canFormat
+    ? "Format"
+    : "Format (JavaScript and TypeScript only)";
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-1.5 border-b bg-background px-2 sm:gap-2 sm:px-3">
@@ -139,7 +151,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
           <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <Braces className="size-3.5" aria-hidden />
           </span>
-          <span className="sr-only md:not-sr-only">JS/TS Playground</span>
+          <span className="sr-only md:not-sr-only">{SITE_NAME}</span>
         </a>
       </h1>
 
@@ -147,10 +159,10 @@ export function EditorToolbar(props: EditorToolbarProps) {
         value={props.language}
         onChange={props.onLanguageChange}
       />
-      <ExamplesMenu onSelect={props.onExample} />
+      <ExamplesMenu language={props.language} onSelect={props.onExample} />
 
       <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-        <CompilerIndicator state={props.compilerState} />
+        <ToolingIndicator state={props.tooling} />
         <ExecutionStatusBadge
           status={props.status}
           durationMs={props.durationMs}
@@ -189,9 +201,10 @@ export function EditorToolbar(props: EditorToolbarProps) {
 
         <div className="hidden items-center gap-0.5 sm:flex">
           <IconAction
-            label="Format"
-            shortcut="Shift + Alt + F"
+            label={formatLabel}
+            shortcut={canFormat ? "Shift + Alt + F" : undefined}
             onClick={onFormat}
+            disabled={!canFormat}
           >
             <WandSparkles aria-hidden />
           </IconAction>
@@ -215,7 +228,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={onFormat}>
+            <DropdownMenuItem onSelect={onFormat} disabled={!canFormat}>
               <WandSparkles aria-hidden /> Format
               <DropdownMenuShortcut>⇧⌥F</DropdownMenuShortcut>
             </DropdownMenuItem>

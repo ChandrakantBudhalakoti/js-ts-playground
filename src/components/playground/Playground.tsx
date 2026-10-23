@@ -8,8 +8,10 @@ import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { ConsolePanel } from "@/components/console/ConsolePanel";
 import { ProblemsPanel } from "@/components/diagnostics/ProblemsPanel";
-import type { CodeEditorHandle } from "@/components/editor/CodeEditor";
+import type { CodeEditorHandle, CodeKey } from "@/components/editor/CodeEditor";
+import { CodeKeys } from "@/components/editor/CodeKeys";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
+import { InputPanel } from "@/components/input/InputPanel";
 import { createEditorHost, EditorSlot } from "@/components/layout/EditorSlot";
 import {
   PlaygroundLayout,
@@ -25,15 +27,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getClangClient } from "@/hooks/useClang";
 import { useCodeExecution } from "@/hooks/useCodeExecution";
 import { getCompilerClient, useCompilerState } from "@/hooks/useCompiler";
 import { useDiagnostics } from "@/hooks/useDiagnostics";
 import { useEditorSettings } from "@/hooks/useEditorSettings";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useToolingStatus } from "@/hooks/useToolingStatus";
+import type { ClangResult } from "@/lib/clang/protocol";
 import { countBySeverity, hasBlockingErrors } from "@/lib/compiler/diagnostics";
 import { FILE_NAMES } from "@/lib/compiler/options";
 import type { CompileResult } from "@/lib/compiler/typescript";
 import { entryToText } from "@/lib/console/format";
+import {
+  isClangLanguage,
+  isJavaScriptLike,
+  isLanguage,
+  languageInfo,
+} from "@/lib/languages";
 import {
   DEFAULT_EXAMPLE,
   EXAMPLE_PARAM,
@@ -46,6 +57,7 @@ import {
   encodeShareHash,
   ShareError,
 } from "@/lib/sharing/encode-code";
+import { SITE_NAME } from "@/lib/site";
 import { readJson, STORAGE_KEYS, writeStorage } from "@/lib/storage";
 import type {
   CodeExample,
@@ -78,6 +90,8 @@ const LONG_URL_WARNING = 8_000;
 interface CodeDocument {
   language: Language;
   code: string;
+  /** Standard input (languages that read it). */
+  stdin?: string;
 }
 
 interface PendingReplace {
@@ -97,13 +111,11 @@ const UNDO_TOAST_MS = 10_000;
 
 function parseDraft(value: unknown): CodeDocument | null {
   if (!value || typeof value !== "object") return null;
-  const { language, code } = value as Record<string, unknown>;
-  if (
-    (language !== "javascript" && language !== "typescript") ||
-    typeof code !== "string"
-  )
-    return null;
-  return { language, code };
+  const { language, code, stdin } = value as Record<string, unknown>;
+  if (!isLanguage(language) || typeof code !== "string") return null;
+  return typeof stdin === "string" && stdin
+    ? { language, code, stdin }
+    : { language, code };
 }
 
 /** The current URL without the document it may carry (share hash, `?example=`). */
@@ -128,6 +140,12 @@ function clearUrlDocument() {
   );
 }
 
+/** Lines of text, not counting the newline that ends the last one. */
+function countLines(text: string): number {
+  if (!text) return 0;
+  return text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
+}
+
 function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
@@ -138,6 +156,7 @@ export function Playground() {
   const { resolvedTheme } = useTheme();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const execution = useCodeExecution(SANDBOX_URL);
+  const { prepare: prepareRuntime } = execution;
   const {
     diagnostics,
     schedule: scheduleCheck,
@@ -146,6 +165,8 @@ export function Playground() {
   } = useDiagnostics();
 
   const [language, setLanguage] = useState<Language>("typescript");
+  const tooling = useToolingStatus(language, compilerState);
+  const [stdin, setStdin] = useState("");
   const [loaded, setLoaded] = useState(false);
   // "code" shows the editor on phones; on desktop the bottom panel treats it as "console".
   const [view, setView] = useState<PanelView>("code");
@@ -161,6 +182,7 @@ export function Playground() {
   const editorRef = useRef<CodeEditorHandle>(null);
   const codeRef = useRef("");
   const languageRef = useRef<Language>("typescript");
+  const stdinRef = useRef("");
   /**
    * Code loaded from the URL (a share link or `?example=`); the URL is
    * cleared once the user edits it.
@@ -177,9 +199,22 @@ export function Playground() {
     savePending.current = false;
     writeStorage(
       STORAGE_KEYS.draft,
-      JSON.stringify({ language: languageRef.current, code: codeRef.current }),
+      JSON.stringify({
+        language: languageRef.current,
+        code: codeRef.current,
+        ...(stdinRef.current ? { stdin: stdinRef.current } : {}),
+      }),
     );
   }, []);
+
+  /** Start downloading what a language needs, so its first run is quick. */
+  const prepareLanguage = useCallback(
+    (next: Language) => {
+      if (isClangLanguage(next)) getClangClient().start();
+      prepareRuntime(languageInfo(next).runtime);
+    },
+    [prepareRuntime],
+  );
 
   const scheduleSave = useCallback(() => {
     savePending.current = true;
@@ -212,13 +247,16 @@ export function Playground() {
       if (!options.shared) clearUrlDocument();
       codeRef.current = doc.code;
       languageRef.current = doc.language;
+      stdinRef.current = doc.stdin ?? "";
       setLanguage(doc.language);
+      setStdin(stdinRef.current);
       editorRef.current?.replaceValue(doc.code);
       clearDiagnostics();
       scheduleCheck(doc.code, doc.language, 0);
+      prepareLanguage(doc.language);
       saveDraft();
     },
-    [clearDiagnostics, scheduleCheck, saveDraft],
+    [clearDiagnostics, prepareLanguage, scheduleCheck, saveDraft],
   );
 
   // Initial document: share link > `?example=` > saved draft > default example.
@@ -252,11 +290,17 @@ export function Playground() {
       if (!doc && !shareError && exampleId !== null) {
         const example = findExample(exampleId);
         if (example) {
-          doc = { language: example.language, code: example.code };
+          doc = {
+            language: example.language,
+            code: example.code,
+            stdin: example.stdin,
+          };
           notice = `Opened “${example.title}”`;
         } else {
           toast.error("That example does not exist.", {
             description: "Your last draft was opened instead.",
+            // Shown while the editor may still be loading, like share errors.
+            duration: 8_000,
           });
           clearUrlDocument();
         }
@@ -270,9 +314,12 @@ export function Playground() {
       };
       codeRef.current = doc.code;
       languageRef.current = doc.language;
+      stdinRef.current = doc.stdin ?? "";
       setLanguage(doc.language);
+      setStdin(stdinRef.current);
       setLoaded(true);
       scheduleCheck(doc.code, doc.language, 0);
+      prepareLanguage(doc.language);
       if (shared) {
         // The saved draft is only overwritten once the URL's code is edited;
         // until then it can be brought back.
@@ -299,7 +346,7 @@ export function Playground() {
     return () => {
       cancelled = true;
     };
-  }, [loadDocument, scheduleCheck]);
+  }, [loadDocument, prepareLanguage, scheduleCheck]);
 
   useEffect(() => {
     onFormatError((error) =>
@@ -339,15 +386,27 @@ export function Playground() {
       setLanguage(next);
       clearDiagnostics();
       scheduleCheck(codeRef.current, next, 0);
+      prepareLanguage(next);
       saveDraft();
     },
-    [clearDiagnostics, loadDocument, scheduleCheck, saveDraft],
+    [clearDiagnostics, loadDocument, prepareLanguage, scheduleCheck, saveDraft],
+  );
+
+  const handleStdinChange = useCallback(
+    (value: string) => {
+      stdinRef.current = value;
+      setStdin(value);
+      scheduleSave();
+    },
+    [scheduleSave],
   );
 
   const handleRun = useCallback(async () => {
     const token = ++runToken.current;
     const code = editorRef.current?.getValue() ?? codeRef.current;
     const lang = languageRef.current;
+    const info = languageInfo(lang);
+    const input = info.stdin ? stdinRef.current : "";
     const clearConsole = settings.clearConsoleOnRun;
     setView("console");
 
@@ -362,6 +421,88 @@ export function Playground() {
     }
 
     const notices: { level: ConsoleLevel; message: string }[] = [];
+    const common = {
+      runtimeName: info.name,
+      fileName: info.fileName,
+      timeoutMs: settings.timeoutMs,
+      clearConsole,
+    };
+
+    if (isClangLanguage(lang)) {
+      const clang = getClangClient();
+      // After a failed download, pressing Run tries again.
+      clang.reset();
+      const started = performance.now();
+      let result: ClangResult;
+      setPreparing(true);
+      execution.announce(
+        clang.state.status === "ready"
+          ? `Compiling ${info.fileName}…`
+          : `Compiling ${info.fileName} (the compiler downloads once, about ${info.download})…`,
+        clearConsole,
+      );
+      try {
+        result = await clang.compile(code, lang);
+      } catch (error) {
+        if (token !== runToken.current) return;
+        setPreparing(false);
+        execution.report({
+          status: "failed",
+          level: "error",
+          message: `Cannot compile ${info.name}: ${error instanceof Error ? error.message : String(error)}`,
+          clearConsole,
+        });
+        return;
+      }
+      if (token !== runToken.current) return; // Superseded by another Run, or stopped.
+      setPreparing(false);
+      applyDiagnosticsFor(code, lang, result.diagnostics);
+      const errors = result.diagnostics.filter((d) => d.severity === "error");
+      const warnings = result.diagnostics.filter(
+        (d) => d.severity === "warning",
+      );
+      if (!result.binary) {
+        execution.report({
+          status: "failed",
+          level: "error",
+          message: `Compilation failed with ${plural(Math.max(errors.length, 1), "error")}. See the Problems panel.`,
+          clearConsole,
+        });
+        setView("problems");
+        return;
+      }
+      const seconds = (performance.now() - started) / 1000;
+      notices.push({
+        level: warnings.length > 0 ? "warn" : "debug",
+        message:
+          `Compiled ${info.fileName} in ${seconds.toFixed(1)} s` +
+          (warnings.length > 0
+            ? ` with ${plural(warnings.length, "warning")} (see the Problems panel).`
+            : "."),
+      });
+      execution.run({
+        ...common,
+        runtime: "wasi",
+        code: "",
+        binary: result.binary,
+        stdin: input,
+        sourceMap: null,
+        notices,
+      });
+      return;
+    }
+
+    if (!isJavaScriptLike(lang)) {
+      execution.run({
+        ...common,
+        runtime: info.runtime,
+        code,
+        stdin: input,
+        sourceMap: null,
+      });
+      return;
+    }
+
     let result: CompileResult;
     setPreparing(true);
     try {
@@ -424,11 +565,11 @@ export function Playground() {
     }
 
     execution.run({
+      ...common,
+      runtime: "js",
       code: result.js,
       fileName: FILE_NAMES[lang],
       sourceMap: result.sourceMap,
-      timeoutMs: settings.timeoutMs,
-      clearConsole,
       notices,
     });
   }, [
@@ -482,6 +623,7 @@ export function Playground() {
       const previous: CodeDocument = {
         language: languageRef.current,
         code: codeRef.current,
+        stdin: stdinRef.current,
       };
       if (replace.resetExecution) resetState();
       loadDocument(replace.doc, { shared: replace.shared });
@@ -559,7 +701,11 @@ export function Playground() {
     (example: CodeExample) =>
       replaceWithConfirmation({
         title: `Open “${example.title}”?`,
-        doc: { language: example.language, code: example.code },
+        doc: {
+          language: example.language,
+          code: example.code,
+          stdin: example.stdin,
+        },
         notice: `Opened “${example.title}”`,
         resetExecution: false,
         shared: false,
@@ -571,7 +717,12 @@ export function Playground() {
     const code = editorRef.current?.getValue() ?? codeRef.current;
     let hash: string;
     try {
-      hash = await encodeShareHash({ language: languageRef.current, code });
+      const lang = languageRef.current;
+      hash = await encodeShareHash({
+        language: lang,
+        code,
+        stdin: languageInfo(lang).stdin ? stdinRef.current : undefined,
+      });
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -590,6 +741,23 @@ export function Playground() {
       url.length > LONG_URL_WARNING
         ? " This link is long and may not work in every app."
         : "";
+    // Phones and tablets: the system share sheet (messaging apps, etc.).
+    if (
+      typeof navigator.share === "function" &&
+      window.matchMedia("(pointer: coarse)").matches
+    ) {
+      try {
+        await navigator.share({
+          title: `${languageInfo(languageRef.current).name} code on ${SITE_NAME}`,
+          url,
+        });
+        return;
+      } catch (error) {
+        // Closing the share sheet is not an error; anything else falls back.
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
+      }
+    }
     try {
       await navigator.clipboard.writeText(url);
       toast.success(
@@ -616,6 +784,11 @@ export function Playground() {
       );
     },
     [isDesktop],
+  );
+
+  const pressKey = useCallback(
+    (key: CodeKey) => editorRef.current?.pressKey(key),
+    [],
   );
 
   const selectProblem = useCallback(
@@ -656,28 +829,57 @@ export function Playground() {
             onRun={() => void handleRun()}
             onStop={handleStop}
             onFormat={() => void editorRef.current?.format()}
+            canFormat={isJavaScriptLike(language)}
             onReset={handleReset}
             onShare={() => void handleShare()}
             settings={settings}
             onSettingsChange={updateSettings}
-            compilerState={compilerState}
+            tooling={tooling}
           />
         }
-        editor={<EditorSlot host={editorHost} />}
+        editor={
+          <div className="flex h-full flex-col">
+            <div className="min-h-0 flex-1">
+              <EditorSlot host={editorHost} />
+            </div>
+            {/* Touch screens only: symbols and keys phone keyboards lack. */}
+            <CodeKeys onKey={pressKey} className="hidden pointer-coarse:flex" />
+          </div>
+        }
         consolePanel={
           <ConsolePanel
             entries={execution.entries}
             dropped={execution.dropped}
             onNavigate={navigate}
+            hint={
+              tooling.status === "loading" && languageInfo(language).download
+                ? `${languageInfo(language).name} is downloading (about ${languageInfo(language).download}, only the first time). Then it runs right in your browser.`
+                : undefined
+            }
           />
         }
         problemsPanel={
           <ProblemsPanel
             diagnostics={diagnostics}
-            compilerState={compilerState}
+            tooling={tooling}
+            uncheckedLanguage={
+              isJavaScriptLike(language) || isClangLanguage(language)
+                ? null
+                : languageInfo(language).name
+            }
             onSelect={selectProblem}
           />
         }
+        inputPanel={
+          languageInfo(language).stdin ? (
+            <InputPanel
+              value={stdin}
+              onChange={handleStdinChange}
+              language={languageInfo(language).name}
+            />
+          ) : null
+        }
+        inputLines={countLines(stdin)}
         consoleCount={execution.entries.length}
         problemCounts={countBySeverity(diagnostics)}
         onClearConsole={execution.clear}

@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { FILE_NAMES } from "@/lib/compiler/options";
 import { playgroundHref } from "@/lib/examples";
 import { findGuide, GUIDES, guideExample } from "@/lib/guides";
+import { languageInfo } from "@/lib/languages";
 import { pageMetadata } from "@/lib/metadata";
 import { absoluteUrl } from "@/lib/site";
 import { CodeBlock } from "./CodeBlock";
@@ -13,8 +13,6 @@ import { JsonLd } from "./JsonLd";
 import { PageHeader } from "./PageHeader";
 import { PlaygroundLink } from "./PlaygroundLink";
 import { Section } from "./Section";
-
-const LANGUAGE_LABEL = { javascript: "JavaScript", typescript: "TypeScript" };
 
 function requireGuide(slug: string) {
   const guide = findGuide(slug);
@@ -108,7 +106,8 @@ export function GuideArticle({ slug }: { slug: string }) {
         heading="The code"
         intro={
           <p>
-            {LANGUAGE_LABEL[example.language]} ({FILE_NAMES[example.language]}
+            {languageInfo(example.language).name} (
+            {languageInfo(example.language).fileName}
             ). This is exactly what opens in the playground.
           </p>
         }
@@ -116,7 +115,7 @@ export function GuideArticle({ slug }: { slug: string }) {
       >
         <CodeBlock
           code={example.code}
-          label={`${LANGUAGE_LABEL[example.language]} example code`}
+          label={`${languageInfo(example.language).name} example code`}
         />
       </Section>
 

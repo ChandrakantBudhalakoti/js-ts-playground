@@ -13,10 +13,12 @@ export const MAX_CONSOLE_ENTRIES = 1_200;
 
 export interface RunContext {
   runId: string;
-  /** Display name of the user's file (`main.ts` / `main.js`). */
+  /** Display name of the user's file (`main.ts`, `main.py`…). */
   fileName: string;
   /** Maps executed-JS positions to source positions (TypeScript only). */
   mapper: PositionMapper | null;
+  /** JavaScript errors read "Uncaught …"; other languages' errors do not. */
+  javascript?: boolean;
 }
 
 const TOKEN_POSITION = new RegExp(
@@ -94,6 +96,7 @@ export function createErrorEntry(
     groupDepth: 0,
     location,
     fileName: context.fileName,
+    ...(context.javascript === false ? { uncaught: false } : {}),
   };
 }
 

@@ -1,12 +1,13 @@
 import {
   ArrowRight,
   BookOpen,
-  Code2,
   FileCheck2,
-  ListChecks,
+  Keyboard,
+  Languages,
   Play,
   Share2,
   ShieldCheck,
+  Smartphone,
   Terminal,
 } from "lucide-react";
 import Link from "next/link";
@@ -18,6 +19,7 @@ import { FaqList, Section } from "@/components/site/Section";
 import { Button } from "@/components/ui/button";
 import { faqJsonLd, HOME_FAQS } from "@/lib/content";
 import { GUIDES } from "@/lib/guides";
+import { LANGUAGES } from "@/lib/languages";
 import { pageMetadata } from "@/lib/metadata";
 import {
   absoluteUrl,
@@ -36,57 +38,62 @@ export const metadata = pageMetadata({
 
 const FEATURES = [
   {
-    icon: Code2,
-    title: "VS Code-style editor",
-    text: "Monaco, the editor behind VS Code, with syntax highlighting, autocomplete, hover information, parameter hints and Prettier formatting.",
+    icon: Smartphone,
+    title: "Made for phones and tablets",
+    text: "Large buttons, a full-screen editor and tabs for your code, its output and its input. Install it on your home screen like an app.",
+  },
+  {
+    icon: Keyboard,
+    title: "Code keys for touch screens",
+    text: "Brackets, quotes, semicolons, Tab and arrow keys in one row above the keyboard, so you don't hunt through phone keyboard layouts.",
+  },
+  {
+    icon: Languages,
+    title: "Ten languages",
+    text: "Python, C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R, each on its real compiler or interpreter: CPython, Clang, CRuby, PHP, webR and more.",
   },
   {
     icon: FileCheck2,
-    title: "Real TypeScript type checking",
-    text: 'A TypeScript language service checks your code as you type, so const age: number = "25" is flagged before you run it.',
-  },
-  {
-    icon: ListChecks,
-    title: "Problems panel",
-    text: "Every error and warning with its code and position, matching the squiggles in the editor. Click one to jump to the line.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Isolated sandbox",
-    text: "Code runs in a Web Worker inside a sandboxed iframe with no network access. Stop, or the time limit, ends even an infinite loop.",
+    title: "Errors you can fix",
+    text: "TypeScript, C and C++ are checked as you type. Every error names the line it happened on; tap it to jump there.",
   },
   {
     icon: Terminal,
-    title: "Interactive console",
-    text: "log, info, warn and error, plus groups, counters and timers. Objects, Maps, Sets and circular references print safely as text.",
+    title: "Output and input",
+    text: "See what your program prints the moment it prints it. Programs that read input (input(), scanf, cin) read the Input tab.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Private and free",
+    text: "Your code runs in your browser, not on a server, and is never uploaded. No account, no ads, no limits on how much you practise.",
   },
   {
     icon: Share2,
-    title: "Share links and drafts",
-    text: "Share code with a link that carries it in the URL, with nothing stored on a server. Your draft is saved in your browser between visits.",
+    title: "Share with a link",
+    text: "Send your code to a friend or teacher with a link, through any app on your phone. Your work is saved in your browser between visits.",
   },
 ];
 
 const STEPS = [
   {
-    title: "Write",
-    text: "Pick JavaScript or TypeScript, start from an example, or paste your own code.",
+    title: "Pick a language",
+    text: "Python, C, C++, JavaScript or any of the others. Each opens with a working example to learn from.",
   },
   {
-    title: "Check",
-    text: "Syntax and type errors show up as squiggles and in the Problems panel while you type.",
+    title: "Write your code",
+    text: "Type in a real code editor with syntax highlighting. On a phone, use the code keys for brackets and symbols.",
   },
   {
-    title: "Run",
-    text: "Press Run or Ctrl/⌘ + Enter. TypeScript is compiled in your browser and the output streams into the console, with runtime errors mapped back to your lines.",
+    title: "Run it",
+    text: "Press Run. The program runs right on your device, and its output appears in the console, with any error linked to its line.",
   },
 ];
 
 const LIMITATIONS = [
-  "It is not Node.js: there is no fs, process or require.",
-  "npm packages can't be imported.",
-  "Code runs in a Web Worker, so there is no document or window.",
-  "Network requests such as fetch are blocked.",
+  "There are no package managers: each language comes with its standard library, but npm, pip, Go modules and gems can't be installed.",
+  "Programs can't open files or use the network.",
+  "C++ exceptions are not supported: a throw ends the program with its message.",
+  "The first run of Python, C, C++, Go, Ruby, PHP, Lua or R downloads its runtime once (0.2 to 27 MB).",
   "Each run has a time limit, 5 seconds by default and up to 30 seconds.",
 ];
 
@@ -97,8 +104,10 @@ const webApplicationJsonLd = {
   url: absoluteUrl("/"),
   description: SITE_DESCRIPTION,
   applicationCategory: "DeveloperApplication",
-  operatingSystem: "Any",
+  applicationSubCategory: "Online compiler and code editor",
+  operatingSystem: "Any (Android, iOS, iPadOS, Windows, macOS, Linux)",
   browserRequirements: "Requires JavaScript and a modern web browser.",
+  featureList: LANGUAGES.map((info) => `${info.name}: ${info.engine}`),
   isAccessibleForFree: true,
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
   license: "https://opensource.org/licenses/MIT",
@@ -113,28 +122,28 @@ export default function HomePage() {
       <JsonLd data={faqJsonLd(HOME_FAQS)} />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
-        <section className="grid items-center gap-10 pt-12 pb-8 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+        <section className="grid items-center gap-10 pt-10 pb-8 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
           <div>
             <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-              Free · Open source · No sign-up
+              Free · No sign-up · Made for phones and tablets
             </p>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-              Write and Run JavaScript &amp; TypeScript Online
+              Learn to Code on Your Phone, Tablet or Laptop
             </h1>
             <p className="mt-5 max-w-xl text-lg text-pretty text-muted-foreground">
-              A free online coding playground for JavaScript and TypeScript.
-              Write code in a VS Code-style editor, catch type errors, execute
-              snippets in an isolated browser sandbox, and share your code with
-              a link.
+              {SITE_NAME} is a free online compiler and code editor for Python,
+              C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R. Write a
+              program, press Run and see what it does. Everything runs in your
+              browser, so all you need is the device you already have.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="h-10 px-4">
+              <Button asChild size="lg" className="h-11 px-5">
                 <PlaygroundLink>
                   <Play className="fill-current" aria-hidden />
                   Start Coding
                 </PlaygroundLink>
               </Button>
-              <Button asChild size="lg" variant="outline" className="h-10 px-4">
+              <Button asChild size="lg" variant="outline" className="h-11 px-5">
                 <Link href="/examples">
                   <BookOpen aria-hidden />
                   Explore Examples
@@ -147,8 +156,8 @@ export default function HomePage() {
 
         <Section
           id="features"
-          heading="Everything you need to try out an idea"
-          intro="No project setup, no build step and no account. Open the playground and start typing."
+          heading="A coding lab in your pocket"
+          intro="No computer, installation or account needed. Open it and start typing, wherever you are."
         >
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, text }) => (
@@ -187,41 +196,41 @@ export default function HomePage() {
           </ol>
         </Section>
 
-        <Section id="languages" heading="JavaScript or TypeScript">
-          <div className="grid gap-6 md:grid-cols-2">
+        <Section
+          id="languages"
+          heading="Pick a language"
+          intro="Each one runs on its real compiler or interpreter, built for WebAssembly, entirely in your browser."
+        >
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {LANGUAGES.map((info) => (
+              <li key={info.id}>
+                <Link
+                  href={info.path}
+                  className="group flex h-full flex-col rounded-xl border p-4 transition-colors hover:bg-muted/50"
+                >
+                  <span className="flex items-center gap-1.5 font-medium">
+                    {info.name}
+                    <ArrowRight
+                      className="size-3.5 opacity-60 transition-transform group-hover:translate-x-0.5"
+                      aria-hidden
+                    />
+                  </span>
+                  <span className="mt-1 text-xs text-muted-foreground">
+                    {info.version}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6">
             <Link
-              href="/javascript"
-              className="group rounded-xl border p-6 transition-colors hover:bg-muted/50"
+              href="/languages"
+              className="inline-flex items-center gap-1 text-sm font-medium hover:underline"
             >
-              <h3 className="flex items-center gap-2 font-medium">
-                JavaScript playground
-                <ArrowRight
-                  className="size-4 transition-transform group-hover:translate-x-0.5"
-                  aria-hidden
-                />
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Modern JavaScript with top-level await, syntax checking and a
-                full console. See what the runtime supports.
-              </p>
+              Compare the languages
+              <ArrowRight className="size-4" aria-hidden />
             </Link>
-            <Link
-              href="/typescript"
-              className="group rounded-xl border p-6 transition-colors hover:bg-muted/50"
-            >
-              <h3 className="flex items-center gap-2 font-medium">
-                TypeScript playground
-                <ArrowRight
-                  className="size-4 transition-transform group-hover:translate-x-0.5"
-                  aria-hidden
-                />
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Strict type checking as you type, transpiling in the browser and
-                runtime errors mapped to your TypeScript lines.
-              </p>
-            </Link>
-          </div>
+          </p>
         </Section>
 
         <Section
@@ -258,7 +267,7 @@ export default function HomePage() {
         <Section
           id="limitations"
           heading="Good to know"
-          intro="The playground is a browser sandbox for experimenting, not a full development environment."
+          intro={`${SITE_NAME} is a place to learn and experiment, not a full development environment.`}
         >
           <ul className="max-w-2xl list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground">
             {LIMITATIONS.map((item) => (
@@ -273,13 +282,13 @@ export default function HomePage() {
 
         <section className="my-12 rounded-2xl border bg-muted/40 px-6 py-10 text-center sm:my-16">
           <h2 className="text-2xl font-semibold tracking-tight">
-            Ready to write some code?
+            Ready to write your first program?
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-muted-foreground">
-            On your first visit the playground opens with a working TypeScript
-            example. Press Run to see it in action.
+            The playground opens with a working example. Press Run to see it in
+            action, then change it and run it again.
           </p>
-          <Button asChild size="lg" className="mt-6 h-10 px-4">
+          <Button asChild size="lg" className="mt-6 h-11 px-5">
             <PlaygroundLink>
               <Play className="fill-current" aria-hidden />
               Start Coding

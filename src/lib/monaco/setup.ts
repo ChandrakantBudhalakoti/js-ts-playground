@@ -1,7 +1,7 @@
 import type * as MonacoNamespace from "monaco-editor";
 import { SHARED_COMPILER_OPTIONS } from "@/lib/compiler/options";
 import { FormatError, formatCode } from "@/lib/format/prettier";
-import type { Diagnostic, Language } from "@/types/playground";
+import type { Diagnostic, ScriptLanguage } from "@/types/playground";
 
 export type Monaco = typeof MonacoNamespace;
 export type MonacoEditor = MonacoNamespace.editor.IStandaloneCodeEditor;
@@ -83,7 +83,7 @@ export function configureMonaco(monaco: Monaco) {
     {
       displayName: "Prettier",
       async provideDocumentFormattingEdits(model, options) {
-        const language: Language =
+        const language: ScriptLanguage =
           model.getLanguageId() === "typescript" ? "typescript" : "javascript";
         try {
           const text = await formatCode(model.getValue(), language, {

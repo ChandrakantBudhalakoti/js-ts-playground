@@ -4,22 +4,21 @@ import { ExampleList } from "@/components/site/ExampleList";
 import { PageHeader } from "@/components/site/PageHeader";
 import { Section } from "@/components/site/Section";
 import { GUIDES, guideExample } from "@/lib/guides";
+import { LANGUAGES, languageInfo } from "@/lib/languages";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata = pageMetadata({
-  title: "JavaScript & TypeScript Examples",
+  title: "Code Examples to Run Online",
   description:
-    "Runnable JavaScript and TypeScript examples: async/await, promises, array methods, interfaces and generics. Read the explanation, then edit and run the code.",
+    "Runnable examples in Python, C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R, plus guides that explain them. Open one, run it, then change it.",
   path: "/examples",
 });
-
-const LANGUAGE_LABEL = { javascript: "JavaScript", typescript: "TypeScript" };
 
 export default function ExamplesPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6">
       <PageHeader
-        heading="JavaScript & TypeScript Examples"
+        heading="Code Examples to Run Online"
         lead={
           <p>
             Short, runnable programs that each focus on one idea. Read how it
@@ -38,7 +37,7 @@ export default function ExamplesPage() {
                 className="group flex h-full flex-col rounded-xl border p-5 transition-colors hover:bg-muted/50"
               >
                 <span className="text-xs font-medium text-muted-foreground">
-                  {LANGUAGE_LABEL[guideExample(guide).language]}
+                  {languageInfo(guideExample(guide).language).name}
                 </span>
                 <h3 className="mt-1 flex items-center gap-2 font-medium">
                   {guide.heading}
@@ -56,17 +55,20 @@ export default function ExamplesPage() {
         </ul>
       </Section>
 
-      <Section
-        id="typescript"
-        heading="TypeScript examples in the playground"
-        intro="Also available from the Examples menu in the editor."
-      >
-        <ExampleList language="typescript" />
-      </Section>
-
-      <Section id="javascript" heading="JavaScript examples in the playground">
-        <ExampleList language="javascript" />
-      </Section>
+      {LANGUAGES.map((info, index) => (
+        <Section
+          key={info.id}
+          id={info.id}
+          heading={`${info.name} examples`}
+          intro={
+            index === 0
+              ? "Also available from the Examples menu in the editor."
+              : undefined
+          }
+        >
+          <ExampleList language={info.id} />
+        </Section>
+      ))}
     </div>
   );
 }

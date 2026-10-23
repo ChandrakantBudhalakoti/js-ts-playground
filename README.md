@@ -1,12 +1,21 @@
-# JS/TS Playground
+# CodeSlate
 
 [![CI](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A free, open-source online playground for JavaScript and TypeScript. Write
-code in a VS Code-style editor (Monaco), get autocomplete and real TypeScript
-type checking, and run it in an isolated browser sandbox with a console for
-output and errors. Nothing to install, no account.
+A free, open-source online code editor and compiler for Python, C, C++,
+JavaScript, TypeScript, Go, Ruby, PHP, Lua and R, built first for phones and
+tablets, so anyone can learn to code without a laptop. Write code in a VS
+Code-style editor (Monaco), get autocomplete and real TypeScript type checking
+(and Clang's errors for C and C++), and run it in an isolated browser sandbox
+with a console for output and errors. Every language runs in your browser,
+compiled to WebAssembly: your code is never sent to a server. Nothing to
+install, no account.
+
+The project used to be called JS/TS Playground; the repository, the
+deployment URL and the browser storage keys keep that name, so existing
+links and saved drafts still work. The display name is `SITE_NAME` in
+`src/lib/site.ts`.
 
 **[Live demo: js-ts-playground-eight.vercel.app](https://js-ts-playground-eight.vercel.app/)**
 · [Open the editor](https://js-ts-playground-eight.vercel.app/playground)
@@ -26,18 +35,35 @@ output and errors. Nothing to install, no account.
   checking from an in-memory language service, so `const age: number = "25"`
   is a real error.
 - **Problems panel:** severity, message, code and position for each
-  diagnostic, matching the editor's squiggles. Click one to jump to it.
+  diagnostic, matching the editor's squiggles. Click one to jump to it. C and
+  C++ are checked by Clang as you type. Other languages report errors when
+  they run, with a link to the failing line.
+- **Ten languages:** JavaScript and TypeScript run natively; Python, C, C++,
+  Go, Ruby, PHP, Lua and R run on WebAssembly builds of their usual
+  interpreters and compilers (see [Languages](#languages)). Each one is
+  downloaded the first time you pick it.
 - **Sandboxed execution:** a sandboxed iframe with an opaque origin runs your
-  code in a Web Worker. Timeouts and Stop work even on `while (true) {}`.
+  code in a Web Worker, with no network access. Timeouts and Stop work even on
+  `while (true) {}`.
+- **Standard input:** for languages that read it (`input()`, `scanf`,
+  `std::cin`, `gets`…), the Input tab is the program's `stdin`.
 - **Console:** `log`, `info`, `warn`, `error`, `debug`, plus groups, counters
   and timers. It handles circular references safely, renders text only (never
   HTML), and caps output.
-- **Examples:** runnable JavaScript and TypeScript examples in the editor's
+- **Examples:** runnable examples for every language in the editor's
   Examples menu. Any of them opens directly at `/playground?example=<id>`, and
   five have guide pages that explain them.
-- **Sharing and drafts:** share links keep the code compressed in the URL hash
-  (no server storage), and your draft is saved in the browser.
-- **Extras:** editor settings, dark and light themes and a mobile layout.
+- **Sharing and drafts:** share links keep the code (and the input)
+  compressed in the URL hash (no server storage), and your draft is saved in
+  the browser.
+- **Phones and tablets:** the editor, output, Problems and input each get
+  the full screen as tabs, every control is at least 40 px tall on touch
+  screens, and a scrollable row of code keys types brackets, quotes,
+  operators, Tab and the arrow keys (with auto-closing brackets, like a real
+  keyboard). The layout follows the on-screen keyboard, word wrap is on by
+  default on phones, Share opens the system share sheet, and the site can be
+  installed to the home screen (web app manifest and icons).
+- **Extras:** editor settings and dark and light themes.
 
 ### Keyboard shortcuts
 
@@ -48,16 +74,64 @@ output and errors. Nothing to install, no account.
 | `Ctrl/⌘ + S`      | Save the draft now (it also autosaves)      |
 | `Ctrl/⌘ + Z`      | Undo, including a replaced example or reset |
 
+## Languages
+
+Every language runs in the browser. JavaScript and TypeScript run directly;
+the others run on WebAssembly builds of their usual implementations, which
+the app downloads from its own origin the first time you pick the language
+(then from the browser cache). The download sizes are gzipped transfers.
+
+| Language   | Runs on                                                                     | First download | Input | Problems while typing |
+| ---------- | --------------------------------------------------------------------------- | -------------- | ----- | --------------------- |
+| JavaScript | The browser's engine, in a Web Worker                                       | –              | –     | TypeScript (syntax)   |
+| TypeScript | TypeScript 5.9, transpiled, then as JavaScript                              | –              | –     | TypeScript (types)    |
+| Python     | CPython 3.14 ([Pyodide](https://pyodide.org))                               | 7 MB           | yes   | –                     |
+| C          | Clang 22 → WASI ([YoWASP](https://yowasp.org)), C17                         | 27 MB          | yes   | Clang                 |
+| C++        | Clang 22 → WASI, C++20 with libc++                                          | 27 MB          | yes   | Clang                 |
+| Go         | [Yaegi](https://github.com/traefik/yaegi) Go interpreter                    | 9 MB           | yes   | –                     |
+| Ruby       | CRuby 3.4 ([ruby.wasm](https://github.com/ruby/ruby.wasm))                  | 9 MB           | yes   | –                     |
+| PHP        | PHP 8.4 CLI ([php-wasm](https://github.com/WordPress/wordpress-playground)) | 8 MB           | yes   | –                     |
+| Lua        | Lua 5.4 ([wasmoon](https://github.com/ceifa/wasmoon))                       | 0.2 MB         | yes   | –                     |
+| R          | R 4.6 ([webR](https://docs.r-wasm.org/webr/))                               | 15 MB          | –     | –                     |
+
+What to expect from each:
+
+- **Python:** the standard library only (no `pip`, no NumPy). `input()` reads
+  the Input tab; `print` output appears as it is printed. Tracebacks keep only
+  your own frames and link to the failing line.
+- **C and C++:** Clang compiles to WebAssembly in a worker of the app, so the
+  first C++ compile of a session takes a few seconds (the standard headers
+  are large). Compile errors and warnings (`-Wall`) appear in the Problems
+  panel. Programs get `stdin`/`stdout`/`stderr`, clocks and random numbers,
+  but no filesystem. **C++ exceptions are not supported:** `throw` ends the
+  program with the exception's message, and `catch` blocks never run.
+  A non-zero exit status marks the run as failed.
+- **Go:** an interpreter, not the Go compiler. Goroutines, channels and most
+  of the standard library work; packages outside the standard library,
+  `os/exec`, `net` and `unsafe` don't.
+- **Ruby, PHP, Lua:** the language's own interpreter and standard library.
+  PHP errors go to stderr (red) and use PHP's own format.
+- **R:** base R with its standard packages (`stats`, `utils`, `methods`,
+  `datasets`…); no package installation and no plots. Top-level
+  values print as in `Rscript`, and warnings are shown as they happen.
+
+Each run starts in a fresh interpreter, and the time limit applies to the run,
+not to downloading or starting the runtime. After a run, the next sandbox
+starts in the background, so later runs don't wait for the runtime to boot.
+
 ## Pages
 
-| Route                                             | What it is                                                                                 |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `/`                                               | Landing page: features, how it works, limitations, FAQ                                     |
-| `/playground`                                     | The editor. `?example=<id>` opens an example; `#lang=…&code=…` is a share link             |
-| `/javascript`, `/typescript`                      | What each language supports, the runtime environment, compiler settings and examples       |
-| `/examples`, `/examples/<slug>`                   | All examples, and guides for async/await, array methods, promises, interfaces and generics |
-| `/sandbox`                                        | The page the code runs in (framed by the editor, `X-Robots-Tag: noindex`)                  |
-| `/sitemap.xml`, `/robots.txt`, `/opengraph-image` | Generated sitemap, robots rules and social-sharing image                                   |
+| Route                                                         | What it is                                                                                 |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `/`                                                           | Landing page: features, how it works, limitations, FAQ                                     |
+| `/playground`                                                 | The editor. `?example=<id>` opens an example; `#lang=…&code=…` is a share link             |
+| `/languages`                                                  | Every language, grouped, with links to its page and the editor                             |
+| `/javascript`, `/typescript`                                  | What each language supports, the runtime environment, compiler settings and examples       |
+| `/python`, `/c`, `/cpp`, `/go`, `/ruby`, `/php`, `/lua`, `/r` | What runs and what doesn't, the runtime, examples and an FAQ (`src/lib/language-pages.ts`) |
+| `/manifest.webmanifest`, `/icon/<id>`, `/apple-icon/<id>`     | Web app manifest and generated app icons                                                   |
+| `/examples`, `/examples/<slug>`                               | All examples, and guides for async/await, array methods, promises, interfaces and generics |
+| `/sandbox`                                                    | The page the code runs in (framed by the editor, `X-Robots-Tag: noindex`)                  |
+| `/sitemap.xml`, `/robots.txt`, `/opengraph-image`             | Generated sitemap, robots rules and social-sharing image                                   |
 
 Share links created before the editor moved to `/playground` point at
 `/#lang=…&code=…`; the home page forwards them, so they keep working.
@@ -67,7 +141,7 @@ Share links created before the editor moved to `/playground` point at
 Requirements: Node.js 20.19 or newer (CI uses Node 24, see `.nvmrc`) and npm.
 
 ```bash
-npm install      # also copies Monaco and the TypeScript libs into public/vendor
+npm install      # also copies Monaco, the TypeScript libs and the language runtimes into public/vendor
 npm run dev      # http://localhost:3000 (the editor is at /playground)
 ```
 
@@ -91,6 +165,14 @@ The first time you run browser tests, install the browsers with
 running instead of building one, set `PLAYWRIGHT_BASE_URL`
 (for example `PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e`).
 
+`playwright.config.ts` defines these projects: `chromium` (everything except
+the phone and language suites), `firefox` (the runtime suite), `mobile`
+(Pixel 7) and `tablet` (iPad, on Chromium) for `mobile.spec.ts`, and
+`languages-chromium` and `languages-firefox`, which run the WebAssembly
+languages after the others have finished, so their downloads and compiles
+don't compete for the CPU. Run one with `npx playwright test --project=mobile`.
+WebKit isn't included; check changes on a real iPhone or iPad.
+
 `predev` and `prebuild` run `scripts/prepare-assets.mjs`, which generates
 `public/vendor/` (git-ignored):
 
@@ -100,6 +182,12 @@ running instead of building one, set `PLAYWRIGHT_BASE_URL`
   files the type checker needs, resolved from `src/lib/compiler/lib-roots.json`.
   Its content depends on that file too, so it is served with
   `must-revalidate` rather than as immutable.
+- `public/vendor/runtimes/<id>/<version>/`: the language runtimes and Clang
+  listed in `src/lib/runtime/runtime-assets.json` (about 75 MB in all),
+  gzipped, with an `index.json` of their files. The app decompresses them
+  itself, so transfers stay small on any host. The script checks that each
+  installed package has the version the JSON names: the sandbox drivers rely
+  on those exact builds.
 
 `postinstall` runs the same script with `--optional`, which skips anything
 whose package is missing. A production-only install (`npm ci --omit=dev`, for
@@ -114,18 +202,22 @@ src/
     layout.tsx                Site-wide metadata, theme, tooltip and toast providers
     (site)/                   Content pages with a shared header and footer:
       page.tsx                  / (landing page)
+      languages/                All languages
       javascript/, typescript/  Language pages
+      python/, c/, cpp/, …      Language pages built by LanguageLanding from language-pages.ts
       examples/                 Example index and one folder per guide
     playground/page.tsx       The editor: renders <Playground />
     sandbox/route.ts          The sandbox page, with its own strict CSP
     sitemap.ts, robots.ts     Generated /sitemap.xml and /robots.txt
     opengraph-image.tsx       Generated social-sharing image
+    manifest.ts, icon.tsx     Web app manifest and app icons (also apple-icon.tsx)
     not-found.tsx, error.tsx  404 page and error boundary
   components/
     playground/Playground.tsx Orchestration: document, run flow, sharing, ?example=, shortcuts
     layout/PlaygroundLayout   Resizable editor/output on desktop, tabs on mobile
-    editor/                   CodeEditor (Monaco), toolbar, language, examples, settings, status
+    editor/                   CodeEditor (Monaco), toolbar, language, examples, settings, status, code keys
     console/                  ConsolePanel, ConsoleEntry
+    input/                    InputPanel (standard input)
     diagnostics/              ProblemsPanel
     site/                     Header, footer, guide article and other content-page components
     ui/                       shadcn/ui primitives
@@ -133,20 +225,30 @@ src/
     useCodeExecution.ts       Sandbox runtime + console state (batched per frame)
     useDiagnostics.ts         Debounced type checking; stale responses are dropped
     useCompiler.ts            Shared compiler-worker client
+    useClang.ts               Shared Clang-worker client (C/C++)
+    useRuntimeAssets.ts       Runtime downloads, shared by the page
+    useToolingStatus.ts       What the current language is loading (toolbar, Problems)
     useEditorSettings.ts      Persisted preferences
   lib/
     compiler/                 Language service, transpile, diagnostics, source maps, worker
+    clang/                    Clang worker, its client and diagnostics parser (C/C++)
     runtime/                  Sandbox document, parent runtime, protocol validation, serializer
+      runtime-worker.ts         Worker for non-JavaScript languages: virtual network, stdio
+      drivers/                  One driver per runtime (Python, Lua, Ruby, PHP, Go, R, WASI)
+      assets.ts                 Downloads and caches runtime files
+      runtime-assets.json       Runtime packages, versions and files (also read by the build)
+    languages.ts              The language registry (names, files, runtimes, share codes)
     console/format.ts         util.inspect-style text formatting, printf substitutions
     monaco/setup.ts           Monaco configuration (TS options, themes, Prettier provider)
     sharing/encode-code.ts    URL-hash share links
     examples.ts, guides.ts    Runnable examples and the guide pages that explain them
+    language-examples.ts      Examples for the WebAssembly languages
     site.ts, metadata.ts      Canonical URL, site name, per-page metadata helper
     content.ts                Landing-page FAQ and copy shared with structured data
   types/playground.ts         Shared types (Language, Diagnostic, ConsoleEntry, RuntimeMessage, ...)
 tests/
-  unit/                       Compiler, diagnostics, serializer, protocol, formatting, sharing, sitemap and content
-  e2e/                        Editor, runtime, sharing, mobile, guides, SEO metadata and accessibility (axe)
+  unit/                       Compiler, diagnostics, serializer, protocol, sandbox scripts, runtime worker, languages, sharing, sitemap and content
+  e2e/                        Editor, runtime, every language's examples, sharing, phone and tablet, guides, SEO metadata and accessibility (axe)
 ```
 
 Links into and out of `/playground` are plain `<a>` elements (full page
@@ -198,13 +300,39 @@ Limits (in `src/lib/runtime/protocol.ts`): 1,000 console messages per run
 (after that the run is stopped), 128 KB per message, 10,000 characters per
 string, and bounded depth and item counts for objects.
 
+### Other languages
+
+1. When you pick a language, the app downloads its runtime files (see
+   [Languages](#languages)) and starts booting a sandbox for it. C and C++
+   also start the Clang worker.
+2. The sandbox iframe is the same as for JavaScript. The app posts the
+   runtime's files to it (`BOOT`); its relay starts a separate worker, and the
+   language driver starts the interpreter from those files. Inside the worker,
+   `fetch` and `XMLHttpRequest` answer requests for the runtime's own
+   virtual `.invalid` URLs from memory and fail for everything else, on top
+   of the CSP's `connect-src 'none'`.
+3. On **Run**, the code (and the Input tab, as `stdin`) is sent to the booted
+   sandbox (`RUN`). C and C++ are first compiled by Clang in the app's worker
+   (source text in, a WASI program out); the program then runs in the sandbox
+   like everything else, with a small WASI implementation.
+4. The worker sends printed text as it comes; the relay groups it into
+   console entries (every 30 ms or 8,000 characters), so output appears even
+   if the program then hangs. Errors arrive as structured messages with the
+   line they point to, and the exit status (C, C++, PHP…) is reported.
+5. As with JavaScript, the timeout lives in the app and destroys the iframe.
+   After each run the next sandbox boots in the background, so every run
+   starts in a fresh interpreter without waiting for one. Text output is
+   limited to 1,000,000 characters per run.
+
 ## Browser limitations
 
 This is **not Node.js**, and the sandbox is a browser sandbox, not a hardened
 server-side execution service.
 
 - No `fs`, `process`, `require` or npm packages: `import` statements can't
-  load packages, and the type checker reports them as unresolved.
+  load packages, and the type checker reports them as unresolved. The other
+  languages likewise have their standard libraries but no package managers
+  (see [Languages](#languages) for each one's limits).
 - Compiler options are fixed (strict mode, ES2022 output, ES2024 and Web
   Worker libs; see `src/lib/compiler/options.ts`) and can't be changed in the
   UI.
@@ -228,7 +356,7 @@ server-side execution service.
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | iframe           | `sandbox="allow-scripts"` (never with `allow-same-origin`), `referrerpolicy="no-referrer"`, hidden, recreated per run                                                                                                            |
 | Sandbox response | `Content-Security-Policy: default-src 'none'; script-src 'sha256-…' blob: 'unsafe-eval'; worker-src blob:; connect-src 'none'; …; frame-ancestors …; sandbox allow-scripts`, plus `nosniff`, `no-referrer`, `Permissions-Policy` |
-| App response     | CSP with `frame-src` limited to the sandbox origin, `object-src 'none'`, `frame-ancestors 'none'`, no `unsafe-eval` in production, `X-Frame-Options: DENY`                                                                       |
+| App response     | CSP with `frame-src` limited to the sandbox origin, `object-src 'none'`, `frame-ancestors 'none'`, no `unsafe-eval` in production (only `'wasm-unsafe-eval'`, for the Clang worker), `X-Frame-Options: DENY`                     |
 | Messages         | Source, origin, channel, run-ID, schema and size validation (`parseRuntimeMessage`)                                                                                                                                              |
 | Output           | Rendered as React text nodes. User output is never inserted as HTML                                                                                                                                                              |
 
@@ -236,6 +364,15 @@ The `sandbox` CSP directive keeps the page at an opaque origin even when it's
 opened directly. `'unsafe-eval'` is allowed **only inside the sandbox**: that
 page already exists to run arbitrary code, so `eval` adds no capability, and
 keeping it means `eval` and `new Function` behave as users expect.
+
+The language runtimes run inside the sandbox too, so the same isolation
+applies to all of them; their worker additionally answers network requests
+from memory (see [Other languages](#other-languages)). The one exception is
+**Clang**, which runs in a worker of the app itself: it only reads the source
+text from a virtual filesystem and writes a WebAssembly program, which then
+runs in the sandbox. Compiling Clang is why the app's CSP allows
+`'wasm-unsafe-eval'`, which permits WebAssembly compilation only, not
+JavaScript `eval`.
 
 ### Separate sandbox origin (recommended for production)
 
@@ -266,7 +403,9 @@ process-level isolation, serve it from a different site:
 
 The app needs no environment variables to work on a single origin, so
 importing the repository into Vercel with the default Next.js settings is
-enough. The vendor assets are generated during the build.
+enough. The vendor assets, including about 75 MB of gzipped language
+runtimes, are generated during the build (Vercel's 100 MB / 1 GB static
+upload limits apply to files uploaded from the CLI, not to build output).
 Never add secrets to `NEXT_PUBLIC_*` variables: they end up in the client
 bundle.
 
@@ -307,7 +446,7 @@ A `*.vercel.app` subdomain can't be verified through DNS, so use a
 3. Back in Search Console, press _Verify_.
 4. Under _Sitemaps_, submit `sitemap.xml`.
 5. Optionally use _URL inspection → Request indexing_ for `/`, `/playground`,
-   `/javascript`, `/typescript` and `/examples`.
+   `/languages`, `/python`, `/c`, `/cpp`, `/javascript` and `/examples`.
 
 Bing Webmaster Tools can import the verified site from Search Console.
 
@@ -318,8 +457,8 @@ Bing Webmaster Tools can import the verified site from Search Console.
 | Job       | Checks                                                                                                                                                                            |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `quality` | `npm ci` (lockfile must be in sync), ESLint with warnings as errors, `tsc`, Prettier check, unit tests, production build, then `verify-security-headers.mjs` against `next start` |
-| `audit`   | `npm audit --omit=dev --audit-level=high` on production dependencies                                                                                                              |
-| `e2e`     | All Playwright tests (Chromium, Firefox, mobile) against the production build. Flaky tests fail the run and `test.only` is rejected. Reports are uploaded as artifacts            |
+| `audit`   | `scripts/audit.mjs`: `npm audit` on production dependencies; any high or critical advisory fails, except the reviewed ones it lists                                               |
+| `e2e`     | All Playwright tests (Chromium, Firefox, phone, tablet) against the production build. Flaky tests fail the run and `test.only` is rejected. Reports are uploaded as artifacts     |
 
 Dependabot (`.github/dependabot.yml`) proposes weekly npm and GitHub Actions
 updates. It leaves `typescript`, `monaco-editor` and `@monaco-editor/react`
@@ -327,6 +466,14 @@ alone, because they must move together: Monaco bundles its own TypeScript. When
 you upgrade Monaco, set `typescript` to the version Monaco bundles and update
 `EXPECTED_TYPESCRIPT_VERSION` and `MONACO_VERSION`. Unit tests fail if these
 drift.
+
+Monaco 0.57.0 pins `dompurify` 3.4.15, which has advisories up to critical.
+They need DOMPurify options Monaco never sets, and Monaco bundles its own copy
+(so an npm `overrides` entry wouldn't change what the site serves).
+`scripts/audit.mjs` accepts exactly those advisories while `monaco-editor` is
+locked at 0.57.0, with the reasons. Upgrading Monaco turns the exception off,
+so check the audit again and remove the entry once Monaco ships dompurify
+3.4.17 or newer.
 
 CI only stops bad code reaching production if production depends on it. Set
 up both of these:
@@ -353,3 +500,21 @@ example or guide page. Please report security issues privately as described in
 ## License
 
 [MIT](LICENSE)
+
+The language runtimes are separate programs, downloaded unmodified from npm
+during the build and served as-is. They keep their own licenses:
+
+| Runtime            | Package               | License                                                 |
+| ------------------ | --------------------- | ------------------------------------------------------- |
+| Python (Pyodide)   | `pyodide`             | MPL-2.0; CPython under the PSF License                  |
+| C/C++ (Clang, LLD) | `@yowasp/clang`       | ISC; LLVM under Apache-2.0 with LLVM exceptions         |
+| Go (Yaegi)         | `yaegi-wasm`          | ISC; Yaegi under Apache-2.0, Go under BSD-3-Clause      |
+| Ruby (ruby.wasm)   | `@ruby/3.4-wasm-wasi` | MIT; CRuby under the Ruby License / BSD-2-Clause        |
+| PHP (php-wasm)     | `@php-wasm/web-8-4`   | GPL-2.0-or-later (the build); PHP under the PHP License |
+| Lua (wasmoon)      | `wasmoon`             | MIT; Lua under MIT                                      |
+| R (webR)           | `webr`                | GPL-3.0 (the binaries); R under GPL-2/GPL-3             |
+
+The GPL-licensed builds (PHP and R) are distributed as unmodified copies of
+the upstream packages; their source is available from
+[WordPress Playground](https://github.com/WordPress/wordpress-playground) and
+[webR](https://github.com/r-wasm/webr).

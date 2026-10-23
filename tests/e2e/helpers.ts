@@ -4,6 +4,8 @@ import type { EditorSettings, Language } from "../../src/types/playground";
 interface OpenOptions {
   code?: string;
   language?: Language;
+  /** Standard input saved with the draft. */
+  stdin?: string;
   settings?: Partial<EditorSettings>;
   /** Hash fragment to open, e.g. a share link. */
   hash?: string;
@@ -41,7 +43,11 @@ export async function openPlayground(page: Page, options: OpenOptions = {}) {
     {
       draft:
         options.code !== undefined
-          ? { language: options.language ?? "javascript", code: options.code }
+          ? {
+              language: options.language ?? "javascript",
+              code: options.code,
+              ...(options.stdin ? { stdin: options.stdin } : {}),
+            }
           : null,
       settings: options.settings ? { ...options.settings } : null,
     },
@@ -50,6 +56,19 @@ export async function openPlayground(page: Page, options: OpenOptions = {}) {
   const hash = options.hash ? `#${options.hash}` : "";
   await page.goto(`/playground${query}${hash}`);
   await waitForPlayground(page);
+}
+
+/** The language picker is labelled "Language: <name>". */
+export async function expectLanguage(page: Page, name: string) {
+  await expect(page.getByTestId("language-select")).toHaveAccessibleName(
+    `Language: ${name}`,
+  );
+}
+
+export async function selectLanguage(page: Page, name: string) {
+  await page.getByTestId("language-select").click();
+  await page.getByRole("option", { name, exact: true }).click();
+  await expectLanguage(page, name);
 }
 
 /** The text of each line the user's code logged (system notes excluded). */

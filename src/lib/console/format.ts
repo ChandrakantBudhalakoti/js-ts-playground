@@ -169,15 +169,28 @@ export function formatConsoleArgs(args: SerializedValue[]): string {
   return [head, ...remaining.map(formatTopLevel)].join(" ");
 }
 
+/**
+ * Heading of a runtime error: "Uncaught TypeError: …" for JavaScript, and
+ * "ZeroDivisionError: …" (or just the message) for other languages.
+ */
+export function runtimeErrorTitle(
+  entry: ConsoleEntry,
+  error: { name: string; message: string },
+): string {
+  const prefix = entry.uncaught === false ? "" : "Uncaught ";
+  if (!error.name) return `${prefix}${error.message}`;
+  return error.message
+    ? `${prefix}${error.name}: ${error.message}`
+    : `${prefix}${error.name}`;
+}
+
 /** Plain-text form of a console entry, for "Copy output". */
 export function entryToText(entry: ConsoleEntry): string {
   const indent = "  ".repeat(entry.groupDepth);
   if (entry.kind === "runtime-error") {
     const error = entry.args[0];
     if (error?.t === "error") {
-      const title = error.name
-        ? `Uncaught ${error.name}: ${error.message}`
-        : `Uncaught ${error.message}`;
+      const title = runtimeErrorTitle(entry, error);
       const frames = error.stack
         ?.split("\n")
         .filter((line) => line.trim() && !line.startsWith(`${error.name}:`))

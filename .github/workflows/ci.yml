@@ -68,9 +68,10 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      # Production dependencies only: anything high or critical fails the build.
+      # Production dependencies only: anything high or critical fails the build,
+      # except advisories reviewed in scripts/audit.mjs (pinned to versions).
       - name: npm audit (production dependencies)
-        run: npm audit --omit=dev --audit-level=high
+        run: node scripts/audit.mjs
 
   e2e:
     name: Browser tests (Chromium · Firefox · mobile)

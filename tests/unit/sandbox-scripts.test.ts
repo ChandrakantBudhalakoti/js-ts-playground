@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import vm from "node:vm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   parseRuntimeMessage,
   RUNTIME_CHANNEL,
@@ -59,7 +59,10 @@ function startRelay() {
     received: Message[] = [];
     terminated = false;
     private listeners: Record<string, Listener[]> = {};
-    constructor() {
+    constructor(
+      readonly url: string,
+      readonly options?: WorkerOptions,
+    ) {
       workers.push(this);
     }
     postMessage(message: Message) {
@@ -89,6 +92,8 @@ function startRelay() {
     URL: { createObjectURL: () => "blob:null/worker" },
     Blob,
     Worker: FakeWorker,
+    setTimeout,
+    clearTimeout,
   });
   vm.runInContext(doc.script, context);
 
@@ -255,5 +260,162 @@ describe("sandbox relay script", () => {
     const relay = startRelay();
     relay.send({ type: "RUN", runId: RUN_ID, code: "", channel: "other" });
     expect(relay.workers).toHaveLength(0);
+  });
+});
+
+describe("sandbox relay script: WebAssembly runtimes", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** A runtime worker booted for RUN_ID. */
+  function booted() {
+    const relay = startRelay();
+    const assets = { "python.wasm": new ArrayBuffer(4) };
+    relay.send({ type: "BOOT", runId: RUN_ID, runtime: "python", assets });
+    const worker = relay.workers[0];
+    worker.emit({ type: "BOOTED", elapsedMs: 12 });
+    return { relay, worker };
+  }
+
+  const out = (stream: 1 | 2, text: string, elapsedMs = 1) => ({
+    type: "OUT",
+    stream,
+    text,
+    elapsedMs,
+  });
+
+  it("boots a runtime worker, then hands it the program", () => {
+    const { relay, worker } = booted();
+    // A classic worker: Chromium cannot start module workers in an opaque origin.
+    expect(worker.options).toEqual({ name: "playground-python" });
+    expect(worker.received[0]).toMatchObject({
+      type: "BOOT",
+      runtime: "python",
+      assets: { "python.wasm": expect.any(ArrayBuffer) },
+    });
+    expect(parseRuntimeMessage(relay.toHost.at(-1)!)).toEqual({
+      channel: RUNTIME_CHANNEL,
+      type: "BOOTED",
+      runId: RUN_ID,
+      elapsedMs: 12,
+    });
+
+    relay.send({ type: "RUN", runId: RUN_ID, code: "print(1)", stdin: "in" });
+    expect(worker.received[1]).toEqual({
+      type: "RUN",
+      code: "print(1)",
+      stdin: "in",
+      binary: undefined,
+    });
+    // One program per sandbox; a run for another ID is not this worker's.
+    relay.send({ type: "RUN", runId: RUN_ID, code: "again" });
+    relay.send({ type: "RUN", runId: "other", code: "x" });
+    expect(worker.received).toHaveLength(2);
+    expect(relay.workers).toHaveLength(1);
+  });
+
+  it("does not send code before the runtime has booted", () => {
+    const relay = startRelay();
+    relay.send({ type: "BOOT", runId: RUN_ID, runtime: "lua", assets: {} });
+    relay.send({ type: "RUN", runId: RUN_ID, code: "print(1)" });
+    expect(relay.workers[0].received).toHaveLength(1);
+  });
+
+  it("batches printed text into console entries, kept in order with errors", () => {
+    const { relay, worker } = booted();
+    relay.send({ type: "RUN", runId: RUN_ID, code: "" });
+    const before = relay.toHost.length;
+    worker.emit(out(1, "one\n"));
+    worker.emit(out(1, "two\n"));
+    worker.emit(out(2, "warning\n"));
+    worker.emit(out(1, "partial"));
+    worker.emit({
+      type: "ERROR",
+      error: { name: "ValueError", message: "bad", line: 2, column: 1 },
+      elapsedMs: 3,
+    });
+    worker.emit({ type: "DONE", elapsedMs: 4, exitCode: 1 });
+    const sent = relay.toHost.slice(before).map((m) => parseRuntimeMessage(m));
+    expect(sent.map((m) => m?.type)).toEqual([
+      "LOG",
+      "LOG",
+      "LOG",
+      "ERROR",
+      "DONE",
+    ]);
+    expect(sent[0]).toMatchObject({
+      level: "log",
+      args: [{ t: "string", v: "one\ntwo" }],
+    });
+    expect(sent[1]).toMatchObject({
+      level: "error",
+      args: [{ t: "string", v: "warning" }],
+    });
+    expect(sent[2]).toMatchObject({ args: [{ t: "string", v: "partial" }] });
+    expect(sent[4]).toMatchObject({ exitCode: 1 });
+  });
+
+  it("shows printed text after a short delay, even if the program then hangs", () => {
+    vi.useFakeTimers();
+    const { relay, worker } = booted();
+    relay.send({ type: "RUN", runId: RUN_ID, code: "" });
+    const before = relay.toHost.length;
+    worker.emit(out(1, "still running\n"));
+    expect(relay.toHost).toHaveLength(before);
+    vi.advanceTimersByTime(RUNTIME_LIMITS.outputFlushMs);
+    expect(relay.toHost.at(-1)).toMatchObject({
+      type: "LOG",
+      args: [{ t: "string", v: "still running" }],
+    });
+  });
+
+  it("splits long output into entries the app accepts", () => {
+    const { relay, worker } = booted();
+    relay.send({ type: "RUN", runId: RUN_ID, code: "" });
+    const before = relay.toHost.length;
+    const line = `${"x".repeat(99)}\n`;
+    worker.emit(out(1, line.repeat(250)));
+    worker.emit({ type: "DONE", elapsedMs: 1 });
+    const logs = relay.toHost.slice(before, -1);
+    expect(logs.length).toBeGreaterThan(1);
+    for (const log of logs) {
+      const parsed = parseRuntimeMessage(log);
+      expect(parsed?.type).toBe("LOG");
+      const text = (log.args as { v: string }[])[0].v;
+      expect(text.length).toBeLessThanOrEqual(RUNTIME_LIMITS.outputBatchChars);
+    }
+    const total = logs
+      .map((log) => (log.args as { v: string }[])[0].v)
+      .join("\n");
+    expect(total).toBe(line.repeat(250).trimEnd());
+  });
+
+  it("stops a runtime that prints too much", () => {
+    const { relay, worker } = booted();
+    relay.send({ type: "RUN", runId: RUN_ID, code: "" });
+    const chunk = "y".repeat(100_000);
+    for (let i = 0; i * chunk.length <= RUNTIME_LIMITS.maxOutputChars; i++)
+      worker.emit(out(1, chunk));
+    expect(worker.terminated).toBe(true);
+    expect(relay.toHost.at(-1)).toMatchObject({
+      type: "LIMIT",
+      reason: expect.stringContaining("Output limit"),
+    });
+  });
+
+  it("reports a runtime that fails to boot", () => {
+    const relay = startRelay();
+    relay.send({ type: "BOOT", runId: RUN_ID, runtime: "r", assets: {} });
+    relay.workers[0].emit({ type: "BOOT_ERROR", message: "no R today" });
+    const [error, done] = relay.toHost
+      .slice(-2)
+      .map((m) => parseRuntimeMessage(m));
+    expect(error).toMatchObject({
+      type: "ERROR",
+      error: { message: expect.stringContaining("no R today") },
+    });
+    expect(done).toMatchObject({ type: "DONE", runId: RUN_ID });
+    expect(relay.workers[0].terminated).toBe(true);
   });
 });

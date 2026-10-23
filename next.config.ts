@@ -18,7 +18,9 @@ function originOf(url: string): string {
 
 const appContentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  // 'wasm-unsafe-eval' lets the C/C++ compiler worker compile Clang (a
+  // WebAssembly module); it does not allow eval() of JavaScript.
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
@@ -78,6 +80,28 @@ const nextConfig: NextConfig = {
         // not just the TypeScript version in its path, so browsers must
         // revalidate it (cheap: a 304 when unchanged).
         source: "/vendor/typescript/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
+      },
+      {
+        // Language runtimes and Clang: each file is fixed by the package
+        // version in its path...
+        source: "/vendor/runtimes/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        // ...but which files are published also depends on
+        // runtime-assets.json, so the list is revalidated (later rules win).
+        source: "/vendor/runtimes/:runtime/:version/index.json",
         headers: [
           {
             key: "Cache-Control",

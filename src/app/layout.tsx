@@ -34,6 +34,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // When the on-screen keyboard opens, shrink the page instead of covering
+  // it, so the editor and its code keys stay above the keyboard (Android).
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#121316" },
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },

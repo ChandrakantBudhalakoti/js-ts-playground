@@ -115,6 +115,12 @@ const monacoVersion = JSON.parse(
     "utf8",
   ),
 ).version;
+const runtimeSpecs = JSON.parse(
+  readFileSync(
+    new URL("../src/lib/runtime/runtime-assets.json", import.meta.url),
+    "utf8",
+  ),
+);
 const assets = [
   // Content fully determined by the versioned path: cache forever.
   {
@@ -125,6 +131,18 @@ const assets = [
   // Content also depends on lib-roots.json: must be revalidated.
   {
     path: `/vendor/typescript/${tsVersion}/lib.json`,
+    cache: /^(?!.*immutable).*(no-cache|must-revalidate)/,
+    expectation: "a revalidating (not immutable) Cache-Control header",
+  },
+  // Language runtimes: files are fixed by the version in their path, but the
+  // list of files depends on runtime-assets.json.
+  {
+    path: `/vendor/runtimes/lua/${runtimeSpecs.lua.version}/glue.wasm.gz`,
+    cache: /immutable/,
+    expectation: "an immutable Cache-Control header",
+  },
+  {
+    path: `/vendor/runtimes/lua/${runtimeSpecs.lua.version}/index.json`,
     cache: /^(?!.*immutable).*(no-cache|must-revalidate)/,
     expectation: "a revalidating (not immutable) Cache-Control header",
   },

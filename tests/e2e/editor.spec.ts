@@ -2,9 +2,11 @@ import { expect, test } from "@playwright/test";
 import {
   answerDialog,
   consoleOutput,
+  expectLanguage,
   expectStatus,
   openPlayground,
   run,
+  selectLanguage,
   setCode,
 } from "./helpers";
 
@@ -105,10 +107,7 @@ test.describe("editor and diagnostics", () => {
       language: "javascript",
       code: "const age = 1;\nconsole.log(age);\n",
     });
-    await page.getByRole("radio", { name: "TypeScript" }).click();
-    await expect(
-      page.getByRole("radio", { name: "TypeScript" }),
-    ).toHaveAttribute("data-state", "on");
+    await selectLanguage(page, "TypeScript");
     await expect(
       page.locator(".monaco-editor .view-line").first(),
     ).toContainText("const age = 1;");
@@ -140,9 +139,7 @@ test.describe("editor and diagnostics", () => {
     await openPlayground(page);
     await page.getByRole("button", { name: "Examples" }).click();
     await page.getByRole("menuitem", { name: /Type errors/ }).click();
-    await expect(
-      page.getByRole("radio", { name: "TypeScript" }),
-    ).toHaveAttribute("data-state", "on");
+    await expectLanguage(page, "TypeScript");
     await page.getByRole("tab", { name: /Problems/ }).click();
     await expect(page.getByTestId("problem-item").first()).toContainText(
       "is not assignable",
@@ -199,9 +196,7 @@ test.describe("sharing and persistence", () => {
     await expect(other.locator(".monaco-editor .view-lines")).toContainText(
       "const shared: string = 'hi';",
     );
-    await expect(
-      other.getByRole("radio", { name: "TypeScript" }),
-    ).toHaveAttribute("data-state", "on");
+    await expectLanguage(other, "TypeScript");
   });
 
   test("a malformed share link falls back gracefully", async ({ page }) => {

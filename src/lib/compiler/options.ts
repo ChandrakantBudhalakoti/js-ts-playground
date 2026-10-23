@@ -1,4 +1,4 @@
-import type { Language } from "@/types/playground";
+import type { ScriptLanguage } from "@/types/playground";
 import LIB_ROOTS from "./lib-roots.json";
 
 /**
@@ -21,7 +21,7 @@ export const MODULE_DETECTION_FORCE = 3;
  */
 export const LIB_FILES: readonly string[] = LIB_ROOTS;
 
-export const FILE_NAMES: Record<Language, string> = {
+export const FILE_NAMES: Record<ScriptLanguage, string> = {
   typescript: "main.ts",
   javascript: "main.js",
 };

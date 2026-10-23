@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Copy, Loader2, Trash2 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -14,9 +14,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { cn } from "@/lib/utils";
 
-export type PanelView = "code" | "console" | "problems";
+export type PanelView = "code" | "console" | "problems" | "input";
 
 interface ProblemCounts {
   errors: number;
@@ -31,6 +32,10 @@ interface PlaygroundLayoutProps {
   editor: ReactNode;
   consolePanel: ReactNode;
   problemsPanel: ReactNode;
+  /** Standard input editor; null for languages that do not read input. */
+  inputPanel: ReactNode | null;
+  /** Lines of standard input, shown as a count on the tab. */
+  inputLines: number;
   view: PanelView;
   onViewChange: (view: PanelView) => void;
   consoleCount: number;
@@ -121,10 +126,24 @@ function ConsoleActions({
   );
 }
 
-const TRIGGER = "h-9 flex-none gap-1.5 px-2 text-xs";
+const TRIGGER =
+  "h-9 flex-none gap-1.5 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-2.5 pointer-coarse:text-sm";
 
 export function PlaygroundLayout(props: PlaygroundLayoutProps) {
-  const { isDesktop, view, onViewChange } = props;
+  const { isDesktop, onViewChange } = props;
+  // Touch screens: stay inside the visible area when the keyboard is open.
+  const visible = useVisualViewport();
+  const rootStyle: CSSProperties | undefined = visible
+    ? {
+        position: "fixed",
+        insetInline: 0,
+        top: visible.offsetTop,
+        height: visible.height,
+      }
+    : undefined;
+  const hasInput = props.inputPanel !== null;
+  // The Input tab disappears for languages without standard input.
+  const view = props.view === "input" && !hasInput ? "console" : props.view;
   const actions =
     view === "console" ? (
       <ConsoleActions
@@ -144,11 +163,16 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
       Problems <ProblemsBadge counts={props.problemCounts} />
     </TabsTrigger>
   );
+  const inputTrigger = hasInput && (
+    <TabsTrigger value="input" className={TRIGGER}>
+      Input <CountBadge count={props.inputLines} />
+    </TabsTrigger>
+  );
 
   if (isDesktop === null) {
     // Viewport unknown during SSR/hydration: render a neutral shell.
     return (
-      <div className="flex h-dvh flex-col overflow-hidden">
+      <div className="flex h-dvh flex-col overflow-hidden" style={rootStyle}>
         {props.toolbar}
         <div
           className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground"
@@ -164,7 +188,7 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
   if (isDesktop) {
     const bottomView = view === "code" ? "console" : view;
     return (
-      <div className="flex h-dvh flex-col overflow-hidden">
+      <div className="flex h-dvh flex-col overflow-hidden" style={rootStyle}>
         {props.toolbar}
         <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
           <ResizablePanel id="editor" defaultSize="64%" minSize="20%">
@@ -180,9 +204,13 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
               className="flex h-full flex-col gap-0"
             >
               <div className="flex shrink-0 items-center justify-between border-b pr-2 pl-1">
-                <TabsList variant="line" className="h-9">
+                <TabsList
+                  variant="line"
+                  className="h-9 min-w-0 overflow-x-auto pointer-coarse:h-11"
+                >
                   {consoleTrigger}
                   {problemsTrigger}
+                  {inputTrigger}
                 </TabsList>
                 {actions}
               </div>
@@ -192,6 +220,11 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
               <TabsContent value="problems" className="min-h-0 overflow-hidden">
                 {props.problemsPanel}
               </TabsContent>
+              {hasInput && (
+                <TabsContent value="input" className="min-h-0 overflow-hidden">
+                  {props.inputPanel}
+                </TabsContent>
+              )}
             </Tabs>
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -200,7 +233,7 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden" style={rootStyle}>
       {props.toolbar}
       <Tabs
         value={view}
@@ -208,12 +241,16 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
         className="flex min-h-0 flex-1 flex-col gap-0"
       >
         <div className="flex shrink-0 items-center justify-between border-b pr-2 pl-1">
-          <TabsList variant="line" className="h-9">
+          <TabsList
+            variant="line"
+            className="h-9 min-w-0 overflow-x-auto pointer-coarse:h-11"
+          >
             <TabsTrigger value="code" className={TRIGGER}>
               Code
             </TabsTrigger>
             {consoleTrigger}
             {problemsTrigger}
+            {inputTrigger}
           </TabsList>
           {actions}
         </div>
@@ -233,6 +270,11 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
           <TabsContent value="problems" className="absolute inset-0">
             {props.problemsPanel}
           </TabsContent>
+          {hasInput && (
+            <TabsContent value="input" className="absolute inset-0">
+              {props.inputPanel}
+            </TabsContent>
+          )}
         </div>
       </Tabs>
     </div>

@@ -56,10 +56,10 @@ export default function OpenGraphImage() {
             letterSpacing: -1,
           }}
         >
-          Write and Run JavaScript & TypeScript Online
+          Learn to Code on Any Phone, Tablet or PC
         </div>
         <div style={{ fontSize: 30, color: "#a3a3a3" }}>
-          Monaco editor · Type checking · Sandboxed console · Share links
+          Python · C · C++ · JavaScript · TypeScript · Go · Ruby · PHP · Lua · R
         </div>
       </div>
 

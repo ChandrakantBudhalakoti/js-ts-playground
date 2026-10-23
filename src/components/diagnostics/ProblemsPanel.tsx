@@ -7,13 +7,19 @@ import {
   Loader2,
   TriangleAlert,
 } from "lucide-react";
-import type { CompilerState } from "@/lib/compiler/compiler-client";
+import type { ToolingStatus } from "@/hooks/useToolingStatus";
 import { cn } from "@/lib/utils";
 import type { Diagnostic } from "@/types/playground";
 
 interface ProblemsPanelProps {
   diagnostics: Diagnostic[];
-  compilerState: CompilerState;
+  /** The checker of the current language (TypeScript or Clang). */
+  tooling: ToolingStatus;
+  /**
+   * Name of the current language when it has no checker while typing (its
+   * errors appear in the console when it runs); null when it has one.
+   */
+  uncheckedLanguage: string | null;
   onSelect: (diagnostic: Diagnostic) => void;
 }
 
@@ -35,27 +41,47 @@ const SEVERITY = {
   },
 } as const;
 
-function EmptyState({ compilerState }: { compilerState: CompilerState }) {
-  if (compilerState.status === "loading") {
+function EmptyState({
+  tooling,
+  uncheckedLanguage,
+}: {
+  tooling: ToolingStatus;
+  uncheckedLanguage: string | null;
+}) {
+  if (uncheckedLanguage) {
     return (
-      <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" aria-hidden />
-        Loading the TypeScript checker…
+      <div className="flex h-full flex-col items-center justify-center gap-1 p-6 text-center text-sm text-muted-foreground">
+        <Info className="size-4 opacity-70" aria-hidden />
+        <p className="max-w-md">
+          {uncheckedLanguage} code is checked when it runs: errors appear in the
+          Console, with a link to the line.
+        </p>
       </div>
     );
   }
-  if (compilerState.status === "error") {
+  if (tooling.status === "loading") {
+    return (
+      <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" aria-hidden />
+        Loading the {tooling.label} checker…
+        {tooling.progress !== null && (
+          <span className="tabular-nums">
+            {Math.round(tooling.progress * 100)}%
+          </span>
+        )}
+      </div>
+    );
+  }
+  if (tooling.status === "error") {
     return (
       <div
         role="alert"
         className="flex h-full flex-col items-center justify-center gap-1 p-6 text-center text-sm"
       >
         <p className="font-medium text-amber-700 dark:text-amber-300">
-          Type checking is unavailable.
+          Checking is unavailable.
         </p>
-        <p className="max-w-md text-muted-foreground">
-          {compilerState.message}
-        </p>
+        <p className="max-w-md text-muted-foreground">{tooling.message}</p>
       </div>
     );
   }
@@ -72,11 +98,14 @@ function EmptyState({ compilerState }: { compilerState: CompilerState }) {
 
 export function ProblemsPanel({
   diagnostics,
-  compilerState,
+  tooling,
+  uncheckedLanguage,
   onSelect,
 }: ProblemsPanelProps) {
   if (diagnostics.length === 0)
-    return <EmptyState compilerState={compilerState} />;
+    return (
+      <EmptyState tooling={tooling} uncheckedLanguage={uncheckedLanguage} />
+    );
 
   return (
     <ul
@@ -107,8 +136,14 @@ export function ProblemsPanel({
               <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
                 {diagnostic.message}
                 <span className="ml-2 text-xs text-muted-foreground">
-                  TS{diagnostic.code}
-                  {diagnostic.source === "syntax" && " · syntax"}
+                  {diagnostic.tool === "clang" ? (
+                    "clang"
+                  ) : (
+                    <>
+                      TS{diagnostic.code}
+                      {diagnostic.source === "syntax" && " · syntax"}
+                    </>
+                  )}
                 </span>
               </span>
               <span className="shrink-0 font-mono text-xs text-muted-foreground">

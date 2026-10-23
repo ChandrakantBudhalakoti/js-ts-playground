@@ -18,6 +18,12 @@ export const RUNTIME_LIMITS = {
   maxArgs: 50,
   maxCodeLength: 1_000_000,
   maxStackLength: 8_000,
+  /** Text printed by non-JavaScript programs per run before it is stopped. */
+  maxOutputChars: 1_000_000,
+  /** Largest console entry made from printed text (below maxStringLength). */
+  outputBatchChars: 8_000,
+  /** Printed text is collected for this long, then shown as one entry. */
+  outputFlushMs: 30,
   serialize: {
     maxDepth: 5,
     maxItems: 100,
@@ -207,8 +213,19 @@ export function parseRuntimeMessage(
       const error = parseErrorInfo(data.error);
       return error ? { channel, type: "ERROR", runId, error, elapsedMs } : null;
     }
-    case "DONE":
-      return { channel, type: "DONE", runId, elapsedMs };
+    case "DONE": {
+      const { exitCode, inputMissing } = data;
+      return {
+        channel,
+        type: "DONE",
+        runId,
+        elapsedMs,
+        ...(Number.isInteger(exitCode) ? { exitCode: exitCode as number } : {}),
+        ...(inputMissing === true ? { inputMissing: true } : {}),
+      };
+    }
+    case "BOOTED":
+      return { channel, type: "BOOTED", runId, elapsedMs };
     case "LIMIT":
       return isString(data.reason, 500)
         ? { channel, type: "LIMIT", runId, reason: data.reason }

@@ -2,7 +2,11 @@
 
 import { Bug, CircleCheck, CircleX, Info, TriangleAlert } from "lucide-react";
 import { memo } from "react";
-import { formatConsoleArgs, formatTopLevel } from "@/lib/console/format";
+import {
+  formatConsoleArgs,
+  formatTopLevel,
+  runtimeErrorTitle,
+} from "@/lib/console/format";
 import { cn } from "@/lib/utils";
 import type {
   ConsoleEntry as ConsoleEntryData,
@@ -40,9 +44,7 @@ function RuntimeError({ entry, onNavigate }: ConsoleEntryProps) {
   // The file of the run that produced the error, not the current language.
   const fileName = entry.fileName ?? "code";
   if (!error || error.t !== "error") return null;
-  const title = error.name
-    ? `Uncaught ${error.name}: ${error.message}`
-    : `Uncaught ${error.message}`;
+  const title = runtimeErrorTitle(entry, error);
   // The first stack line repeats the message in V8; show only the frames.
   const frames = error.stack
     ?.split("\n")

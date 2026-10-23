@@ -11,6 +11,7 @@ import {
 } from "@/lib/compiler/options";
 import { createPositionMapper } from "@/lib/compiler/source-map";
 import { EXAMPLES } from "@/lib/examples";
+import { isJavaScriptLike } from "@/lib/languages";
 import { getCompilerService } from "./helpers";
 
 describe("compiler options", () => {
@@ -189,10 +190,12 @@ describe("TypeScript compiler service", () => {
     });
   });
 
-  it("compiles every starter example; only the type-error demo has errors", async () => {
+  it("compiles every JS/TS example; only the type-error demo has errors", async () => {
     const service = await getCompilerService();
     for (const example of EXAMPLES) {
-      const { diagnostics } = service.compile(example.code, example.language);
+      const { language } = example;
+      if (!isJavaScriptLike(language)) continue;
+      const { diagnostics } = service.compile(example.code, language);
       if (example.id === "ts-type-errors") {
         expect(diagnostics.length, example.id).toBeGreaterThan(0);
         expect(hasBlockingErrors(diagnostics), example.id).toBe(false);

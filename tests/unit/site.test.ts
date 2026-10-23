@@ -13,7 +13,7 @@ import {
 } from "@/lib/examples";
 import { findGuide, GUIDES, guideExample } from "@/lib/guides";
 import { OG_IMAGE, pageMetadata } from "@/lib/metadata";
-import { absoluteUrl, SITE_URL, STATIC_ROUTES } from "@/lib/site";
+import { absoluteUrl, SITE_NAME, SITE_URL, STATIC_ROUTES } from "@/lib/site";
 
 const EXAMPLE_ROUTES_DIR = join(
   import.meta.dirname,
@@ -64,7 +64,7 @@ describe("pageMetadata", () => {
     expect(metadata.title).toBe("Promises");
     expect(metadata.alternates?.canonical).toBe("/examples/promises");
     expect(metadata.openGraph).toMatchObject({
-      title: "Promises | JS/TS Playground",
+      title: `Promises | ${SITE_NAME}`,
       description: "About promises.",
       url: "/examples/promises",
       images: [OG_IMAGE],
@@ -84,9 +84,12 @@ describe("pageMetadata", () => {
 });
 
 describe("examples", () => {
-  it("have unique ids and titles", () => {
+  it("have unique ids, and unique titles within each language", () => {
     const ids = EXAMPLES.map((example) => example.id);
-    const titles = EXAMPLES.map((example) => example.title);
+    // The Examples menu lists one language at a time.
+    const titles = EXAMPLES.map(
+      (example) => `${example.language}: ${example.title}`,
+    );
     expect(new Set(ids).size).toBe(ids.length);
     expect(new Set(titles).size).toBe(titles.length);
   });
