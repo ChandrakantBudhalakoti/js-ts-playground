@@ -1,4 +1,5 @@
 import { EXPECTED_TYPESCRIPT_VERSION } from "@/lib/compiler/options";
+import { SITE_NAME } from "@/lib/site";
 
 /**
  * Copy shared by the landing pages and their structured data. Every claim
@@ -7,21 +8,18 @@ import { EXPECTED_TYPESCRIPT_VERSION } from "@/lib/compiler/options";
  */
 
 /**
- * The code in the landing page's preview and the line the playground's console
+ * The code in the landing page's preview and what the playground's console
  * prints for it (asserted by tests/e2e/site.spec.ts).
  */
 export const HERO_EXAMPLE = {
-  code: `interface User {
-  name: string;
-  languages: string[];
-}
+  language: "python" as const,
+  code: `languages = ["Python", "C", "JavaScript"]
 
-const ada: User = {
-  name: "Ada",
-  languages: ["TS", "JS"],
-};
-console.log(\`Hi, \${ada.name}!\`, ada.languages);`,
-  output: "Hi, Ada! [ 'TS', 'JS' ]",
+for language in languages:
+    print(f"Ada is learning {language}")`,
+  output: ["Python", "C", "JavaScript"]
+    .map((language) => `Ada is learning ${language}`)
+    .join("\n"),
 };
 
 export interface Faq {
@@ -31,24 +29,34 @@ export interface Faq {
 
 export const HOME_FAQS: Faq[] = [
   {
-    question: "Is JS/TS Playground free?",
+    question: `Is ${SITE_NAME} free?`,
     answer:
       "Yes. It is free to use, needs no account, and the source code is open under the MIT license.",
   },
   {
+    question: "Does it work on a phone or tablet?",
+    answer:
+      "Yes, it is designed for them. The editor, the output and the input each get the full screen, buttons are big enough to tap, and a row of code keys gives you brackets, symbols, Tab and the arrow keys. A recent version of Chrome, Edge or Firefox is all you need, and you can add it to your home screen like an app.",
+  },
+  {
     question: "Do I need to install anything?",
     answer:
-      "No. Everything runs in a modern browser. The Monaco editor and the TypeScript compiler are loaded from the site itself the first time you open the playground.",
+      "No. Everything runs in a modern browser. The Monaco editor and the TypeScript compiler are loaded from the site itself the first time you open the playground, and each other language is downloaded the first time you pick it.",
+  },
+  {
+    question: "Which languages can I run?",
+    answer:
+      "JavaScript and TypeScript, plus Python, C, C++, Go, Ruby, PHP, Lua and R. Those run on WebAssembly builds of their usual implementations: CPython, Clang, the Yaegi Go interpreter, CRuby, PHP, Lua and webR. Programs that read standard input get the text of the Input tab.",
   },
   {
     question: "Is my code sent to a server?",
     answer:
-      "No. Type checking, compiling and running all happen in your browser. Drafts are saved in your browser's local storage, and share links keep the code in the part of the URL after the #, which browsers do not send to the server.",
+      "No. Type checking, compiling and running all happen in your browser, in every language. Drafts are saved in your browser's local storage, and share links keep the code in the part of the URL after the #, which browsers do not send to the server.",
   },
   {
     question: "Can I import npm packages?",
     answer:
-      "No. The sandbox has no package loader and no network access, so imports of packages do not resolve. Built-in language features and Web Worker APIs such as timers, crypto and structuredClone are available.",
+      "No. The sandbox has no package loader and no network access, so imports of packages do not resolve. Built-in language features and Web Worker APIs such as timers, crypto and structuredClone are available. The other languages likewise come with their standard libraries only, without pip, Go modules or gems.",
   },
   {
     question: "Can I use document, window or fetch?",

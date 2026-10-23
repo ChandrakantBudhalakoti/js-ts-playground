@@ -1,6 +1,8 @@
+import { LANGUAGE_EXAMPLES } from "@/lib/language-examples";
+import { LANGUAGES } from "@/lib/languages";
 import type { CodeExample, Language } from "@/types/playground";
 
-export const EXAMPLES: CodeExample[] = [
+const SCRIPT_EXAMPLES: CodeExample[] = [
   {
     id: "ts-hello",
     title: "Hello, TypeScript",
@@ -525,10 +527,22 @@ while (true) {
   },
 ];
 
-export const DEFAULT_EXAMPLE: Record<Language, CodeExample> = {
-  typescript: EXAMPLES.find((e) => e.id === "ts-hello")!,
-  javascript: EXAMPLES.find((e) => e.id === "js-basics")!,
-};
+export const EXAMPLES: CodeExample[] = [
+  ...SCRIPT_EXAMPLES,
+  ...LANGUAGE_EXAMPLES,
+];
+
+/** Starter code per language: the first example of other languages. */
+export const DEFAULT_EXAMPLE = Object.fromEntries(
+  LANGUAGES.map(({ id }) => [
+    id,
+    id === "typescript"
+      ? EXAMPLES.find((e) => e.id === "ts-hello")!
+      : id === "javascript"
+        ? EXAMPLES.find((e) => e.id === "js-basics")!
+        : EXAMPLES.find((e) => e.language === id)!,
+  ]),
+) as Record<Language, CodeExample>;
 
 /** Query parameter that opens an example in the playground: `/playground?example=<id>`. */
 export const EXAMPLE_PARAM = "example";

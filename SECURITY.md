@@ -1,6 +1,6 @@
 # Security policy
 
-JS/TS Playground runs untrusted code in the browser, so its sandbox is the
+CodeSlate runs untrusted code in the browser, so its sandbox is the
 most security-sensitive part of the project. The isolation model is described
 in [the README](README.md#security-model-and-production-setup).
 
@@ -23,6 +23,10 @@ deployed from there; only the latest deployment is supported.
 ## In scope
 
 - Escaping the sandbox iframe or its Web Worker
+- A language runtime (Python, Ruby, PHP, Go, Lua, R or a compiled C/C++
+  program) reaching the network or the app from the sandbox
+- Code compiled by Clang affecting the app, although Clang runs in the app's
+  own worker
 - Bypassing the Content Security Policy of the app or of `/sandbox`
 - Messages from the sandbox being accepted when they should be rejected
 - Console output being rendered as HTML

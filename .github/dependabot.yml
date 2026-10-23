@@ -15,6 +15,16 @@ updates:
       - dependency-name: typescript
       - dependency-name: monaco-editor
       - dependency-name: "@monaco-editor/react"
+      # Language runtimes: the sandbox drivers (src/lib/runtime/drivers) use
+      # internals of these exact builds. Upgrade by hand: update
+      # src/lib/runtime/runtime-assets.json and run `npm run test:e2e`.
+      - dependency-name: pyodide
+      - dependency-name: wasmoon
+      - dependency-name: "@ruby/3.4-wasm-wasi"
+      - dependency-name: "@php-wasm/web-8-4"
+      - dependency-name: yaegi-wasm
+      - dependency-name: webr
+      - dependency-name: "@yowasp/clang"
 
   - package-ecosystem: github-actions
     directory: /

@@ -1,4 +1,28 @@
-export type Language = "javascript" | "typescript";
+export type Language =
+  | "javascript"
+  | "typescript"
+  | "python"
+  | "c"
+  | "cpp"
+  | "go"
+  | "ruby"
+  | "php"
+  | "lua"
+  | "r";
+
+/** The languages the TypeScript compiler, Monaco's language service and Prettier handle. */
+export type ScriptLanguage = "javascript" | "typescript";
+
+/**
+ * What executes a language in the sandbox. `js` runs JavaScript directly;
+ * every other runtime is a WebAssembly interpreter (or, for `wasi`, a
+ * program compiled by Clang) loaded into the sandbox's worker.
+ */
+export type RuntimeId =
+  "js" | "python" | "lua" | "ruby" | "php" | "go" | "r" | "wasi";
+
+/** Runtimes that are booted from downloaded files before they can run code. */
+export type WasmRuntimeId = Exclude<RuntimeId, "js">;
 
 export type ConsoleLevel = "log" | "info" | "warn" | "error" | "debug";
 
@@ -25,6 +49,8 @@ export interface Diagnostic {
   startColumn: number;
   endLine: number;
   endColumn: number;
+  /** Set for C/C++ diagnostics, which come from Clang (`code` is then 0). */
+  tool?: "clang";
 }
 
 /** A console argument serialized inside the sandbox. Rendered as text only, never as HTML. */
@@ -72,8 +98,13 @@ export interface ConsoleEntry {
   groupDepth: number;
   /** Source location in the user's code, when known (runtime errors). */
   location?: SourceLocation;
-  /** File the location refers to (`main.ts` / `main.js`), fixed at run time. */
+  /** File the location refers to (`main.ts`, `main.py`…), fixed at run time. */
   fileName?: string;
+  /**
+   * Runtime errors from JavaScript read "Uncaught …". `false` for other
+   * languages, whose errors are shown the way they report them.
+   */
+  uncaught?: false;
   /** Visual tone for system entries. */
   tone?: "success";
 }
@@ -90,6 +121,8 @@ export interface RuntimeErrorInfo {
 /** Messages the sandbox sends to the app. Every one is validated before use. */
 export type RuntimeMessage =
   | { channel: string; type: "READY" }
+  /** A WebAssembly runtime finished booting and waits for code. */
+  | { channel: string; type: "BOOTED"; runId: string; elapsedMs: number }
   | {
       channel: string;
       type: "LOG";
@@ -106,12 +139,38 @@ export type RuntimeMessage =
       error: RuntimeErrorInfo;
       elapsedMs: number;
     }
-  | { channel: string; type: "DONE"; runId: string; elapsedMs: number }
+  | {
+      channel: string;
+      type: "DONE";
+      runId: string;
+      elapsedMs: number;
+      /** Exit status of programs that have one (non-JavaScript runtimes). */
+      exitCode?: number;
+      /** The program read standard input, but none was given. */
+      inputMissing?: true;
+    }
   | { channel: string; type: "LIMIT"; runId: string; reason: string };
 
 /** Messages the app sends to the sandbox. */
 export type HostMessage =
-  | { channel: string; type: "RUN"; runId: string; code: string }
+  /** Start a WebAssembly runtime from its files, ahead of the code. */
+  | {
+      channel: string;
+      type: "BOOT";
+      runId: string;
+      runtime: WasmRuntimeId;
+      assets: Record<string, ArrayBuffer>;
+    }
+  | {
+      channel: string;
+      type: "RUN";
+      runId: string;
+      code: string;
+      /** Standard input for programs that read it. */
+      stdin?: string;
+      /** A compiled program (`wasi` runtime). */
+      binary?: ArrayBuffer;
+    }
   | { channel: string; type: "STOP"; runId: string };
 
 export interface EditorSettings {
@@ -130,4 +189,6 @@ export interface CodeExample {
   description: string;
   language: Language;
   code: string;
+  /** Standard input the example expects (put in the Input panel). */
+  stdin?: string;
 }

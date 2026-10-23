@@ -10,6 +10,7 @@ import {
   RUNTIME_LIMITS,
 } from "@/lib/runtime/protocol";
 import {
+  buildRuntimeWorkerSource,
   buildSandboxDocument,
   sandboxContentSecurityPolicy,
 } from "@/lib/runtime/sandbox-document";
@@ -60,6 +61,40 @@ describe("parseRuntimeMessage", () => {
     expect(
       parseRuntimeMessage({ ...base, type: "LIMIT", reason: "too much" }),
     ).toMatchObject({ type: "LIMIT" });
+  });
+
+  it("accepts runtime boots and exit statuses", () => {
+    expect(
+      parseRuntimeMessage({ ...base, type: "BOOTED", elapsedMs: 900 }),
+    ).toEqual({ ...base, type: "BOOTED", elapsedMs: 900 });
+    expect(
+      parseRuntimeMessage({ ...base, type: "DONE", elapsedMs: 1, exitCode: 3 }),
+    ).toEqual({ ...base, type: "DONE", elapsedMs: 1, exitCode: 3 });
+    // Anything but an integer exit status is dropped, not trusted.
+    for (const exitCode of [1.5, "3", null, Infinity]) {
+      expect(
+        parseRuntimeMessage({ ...base, type: "DONE", elapsedMs: 1, exitCode }),
+      ).toEqual({ ...base, type: "DONE", elapsedMs: 1 });
+    }
+    expect(
+      parseRuntimeMessage({ channel: RUNTIME_CHANNEL, type: "BOOTED" }),
+    ).toBeNull();
+    expect(
+      parseRuntimeMessage({
+        ...base,
+        type: "DONE",
+        elapsedMs: 1,
+        inputMissing: true,
+      }),
+    ).toEqual({ ...base, type: "DONE", elapsedMs: 1, inputMissing: true });
+    expect(
+      parseRuntimeMessage({
+        ...base,
+        type: "DONE",
+        elapsedMs: 1,
+        inputMissing: "yes",
+      }),
+    ).toEqual({ ...base, type: "DONE", elapsedMs: 1 });
   });
 
   it("rejects messages from other channels or with unknown types", () => {
@@ -196,6 +231,17 @@ describe("sandbox document", () => {
     );
     expect(doc.html).toContain(`<script>${doc.script}</script>`);
     expect(doc.scriptHash).toBe(sha256(doc.script));
+  });
+
+  it("embeds a valid, self-contained worker for the other languages", () => {
+    const source = buildRuntimeWorkerSource();
+    expect(() => new Function(source)).not.toThrow();
+    expect(source).not.toMatch(
+      /__vite_ssr|__TURBOPACK__|__webpack_require__|turbopack_context/,
+    );
+    for (const runtime of ["python", "lua", "ruby", "php", "go", "r", "wasi"])
+      expect(source).toContain(`"${runtime}": (`);
+    expect(doc.script).toContain(JSON.stringify(source));
   });
 
   it("builds a restrictive CSP", () => {

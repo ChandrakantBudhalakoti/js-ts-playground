@@ -2,9 +2,12 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { encodeShareHash } from "../../src/lib/sharing/encode-code";
 import { GUIDES } from "../../src/lib/guides";
-import { SITE_URL, STATIC_ROUTES } from "../../src/lib/site";
+import { LANGUAGE_PAGES } from "../../src/lib/language-pages";
+import { languageInfo } from "../../src/lib/languages";
+import { SITE_NAME, SITE_URL, STATIC_ROUTES } from "../../src/lib/site";
 import { HERO_EXAMPLE } from "../../src/lib/content";
 import {
+  expectLanguage,
   expectStatus,
   loggedLines,
   openPlayground,
@@ -13,10 +16,15 @@ import {
 } from "./helpers";
 
 const CONTENT_PAGES = [
-  { path: "/", h1: "Write and Run JavaScript & TypeScript Online" },
+  { path: "/", h1: "Learn to Code on Your Phone, Tablet or Laptop" },
+  { path: "/languages", h1: "Programming Languages You Can Run Online" },
   { path: "/javascript", h1: "Online JavaScript Playground" },
   { path: "/typescript", h1: "Online TypeScript Playground" },
-  { path: "/examples", h1: "JavaScript & TypeScript Examples" },
+  ...LANGUAGE_PAGES.map((page) => ({
+    path: languageInfo(page.language).path,
+    h1: page.title,
+  })),
+  { path: "/examples", h1: "Code Examples to Run Online" },
   ...GUIDES.map((guide) => ({
     path: `/examples/${guide.slug}`,
     h1: guide.heading,
@@ -97,11 +105,9 @@ test.describe("SEO metadata", () => {
     await page.goto("/playground");
     await waitForPlayground(page);
     const tags = await head(page);
-    expect(tags.title).toBe(
-      "Online JavaScript & TypeScript Editor | JS/TS Playground",
-    );
+    expect(tags.title).toBe(`Online Code Editor and Compiler | ${SITE_NAME}`);
     expect(tags.canonical).toBe(`${SITE_URL}/playground`);
-    expect(tags.h1s).toEqual(["JS/TS Playground"]);
+    expect(tags.h1s).toEqual([SITE_NAME]);
   });
 
   test("robots.txt allows crawling and points to the sitemap", async ({
@@ -193,17 +199,17 @@ test.describe("navigation", () => {
     await page.getByRole("link", { name: "Explore Examples" }).click();
     await expect(page).toHaveURL(/\/examples$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "JavaScript & TypeScript Examples",
+      "Code Examples to Run Online",
     );
   });
 
   test("the playground logo links back to the home page", async ({ page }) => {
     await page.goto("/playground");
     await waitForPlayground(page);
-    await page.getByRole("link", { name: "JS/TS Playground" }).click();
+    await page.getByRole("link", { name: SITE_NAME }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "Write and Run JavaScript & TypeScript Online",
+      "Learn to Code on Your Phone, Tablet or Laptop",
     );
   });
 
@@ -211,11 +217,11 @@ test.describe("navigation", () => {
     page,
   }) => {
     await openPlayground(page, {
-      language: "typescript",
+      language: HERO_EXAMPLE.language,
       code: HERO_EXAMPLE.code,
     });
     await run(page);
-    await expectStatus(page, "completed");
+    await expectStatus(page, "completed", 120_000);
     await expect(loggedLines(page)).toHaveText([HERO_EXAMPLE.output]);
     await expect(page.getByTestId("problem-item")).toHaveCount(0);
   });
@@ -233,9 +239,7 @@ test.describe("navigation", () => {
     await expect(page.locator(".monaco-editor .view-lines")).toContainText(
       "const legacy: string = 'old link';",
     );
-    await expect(
-      page.getByRole("radio", { name: "TypeScript" }),
-    ).toHaveAttribute("data-state", "on");
+    await expectLanguage(page, "TypeScript");
   });
 });
 

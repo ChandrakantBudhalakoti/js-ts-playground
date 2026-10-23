@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { EXAMPLES } from "../../src/lib/examples";
 import { GUIDES } from "../../src/lib/guides";
+import { languageInfo } from "../../src/lib/languages";
 import {
   expectStatus,
   loggedLines,
@@ -9,8 +10,6 @@ import {
   setCode,
   waitForPlayground,
 } from "./helpers";
-
-const LANGUAGE_NAME = { javascript: "JavaScript", typescript: "TypeScript" };
 
 test.describe("example guides", () => {
   for (const guide of GUIDES) {
@@ -41,9 +40,9 @@ test.describe("opening examples by URL", () => {
       page,
     }) => {
       await openPlayground(page, { query: `example=${example.id}` });
-      await expect(
-        page.getByRole("radio", { name: LANGUAGE_NAME[example.language] }),
-      ).toHaveAttribute("data-state", "on");
+      await expect(page.getByTestId("language-select")).toHaveAccessibleName(
+        `Language: ${languageInfo(example.language).name}`,
+      );
       const firstLine = example.code.split("\n")[0];
       await expect(
         page.locator(".monaco-editor .view-line").first(),

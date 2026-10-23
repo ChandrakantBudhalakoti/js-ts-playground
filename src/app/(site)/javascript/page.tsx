@@ -67,7 +67,7 @@ const FAQS: Faq[] = [
   {
     question: "Can I switch to TypeScript later?",
     answer:
-      "Yes. Use the JS/TS toggle in the toolbar. Your code is kept and checked as TypeScript from then on.",
+      "Yes. Pick TypeScript in the language menu in the toolbar. Your code is kept and checked as TypeScript from then on.",
   },
 ];
 

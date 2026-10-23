@@ -1,4 +1,4 @@
-import type { Diagnostic, Language } from "@/types/playground";
+import type { Diagnostic, ScriptLanguage } from "@/types/playground";
 import type { CompilerRequest, CompilerResponse } from "./protocol";
 import type { CompileResult } from "./typescript";
 
@@ -53,14 +53,17 @@ export class CompilerClient {
     return () => this.listeners.delete(listener);
   }
 
-  async check(code: string, language: Language): Promise<Diagnostic[]> {
+  async check(code: string, language: ScriptLanguage): Promise<Diagnostic[]> {
     const response = await this.request({ type: "check", code, language });
     if (response.type !== "check")
       throw new Error("Unexpected compiler response.");
     return response.diagnostics;
   }
 
-  async compile(code: string, language: Language): Promise<CompileResult> {
+  async compile(
+    code: string,
+    language: ScriptLanguage,
+  ): Promise<CompileResult> {
     const response = await this.request({ type: "compile", code, language });
     if (response.type !== "compile")
       throw new Error("Unexpected compiler response.");

@@ -1,5 +1,14 @@
 import type { SerializedValue } from "@/types/playground";
+import { goDriver } from "./drivers/go";
+import { luaDriver } from "./drivers/lua";
+import { phpDriver } from "./drivers/php";
+import { pythonDriver } from "./drivers/python";
+import { rDriver } from "./drivers/r";
+import { rubyDriver } from "./drivers/ruby";
+import type { DriverFactory } from "./drivers/types";
+import { wasiDriver } from "./drivers/wasi";
 import { RUNTIME_CHANNEL, RUNTIME_LIMITS } from "./protocol";
+import { runtimeWorkerMain, type RuntimeWorkerConfig } from "./runtime-worker";
 import { serializeValue, type SerializeLimits } from "./serialize";
 
 /** Placeholder that replaces the user module's blob URL in stack traces. */
@@ -17,7 +26,30 @@ interface RelayConfig {
   maxMessages: number;
   maxMessageBytes: number;
   maxCodeLength: number;
+  /** Text output (non-JavaScript runtimes) allowed per run. */
+  maxOutputChars: number;
+  /** Largest console entry made from text output. */
+  outputBatchChars: number;
+  /** How long text output is collected before it is shown. */
+  outputFlushMs: number;
 }
+
+/** Language drivers by runtime ID (see ./drivers/types.ts). */
+const DRIVERS: Record<string, DriverFactory> = {
+  python: pythonDriver,
+  lua: luaDriver,
+  ruby: rubyDriver,
+  php: phpDriver,
+  go: goDriver,
+  r: rDriver,
+  wasi: wasiDriver,
+};
+
+/**
+ * Origin of the runtimes' virtual file URLs inside the worker. `.invalid`
+ * never resolves, and the worker answers these URLs itself.
+ */
+export const RUNTIME_VIRTUAL_ORIGIN = "https://runtime.playground.invalid/";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -329,9 +361,19 @@ function sandboxWorkerMain(
  * the worker when it exceeds the output limits. User code never runs here,
  * so this context stays responsive even if the worker is stuck in a loop.
  *
+ * JavaScript runs in a worker started by RUN. Other languages run in a
+ * runtime worker started by BOOT (with the runtime's files), which receives
+ * the code with a later RUN. Their output arrives as text chunks (OUT) that
+ * are batched here into console entries: the worker may be stuck in a loop,
+ * so the relay, not the worker, decides when output is shown.
+ *
  * Self-contained: serialized with `Function.prototype.toString`.
  */
-function sandboxRelayMain(workerSource: string, config: RelayConfig) {
+function sandboxRelayMain(
+  workerSource: string,
+  runtimeWorkerSource: string,
+  config: RelayConfig,
+) {
   const host = window.parent;
   if (!host || host === window) {
     document.body.textContent =
@@ -341,11 +383,19 @@ function sandboxRelayMain(workerSource: string, config: RelayConfig) {
   const workerUrl = URL.createObjectURL(
     new Blob([workerSource], { type: "text/javascript" }),
   );
+  let runtimeWorkerUrl = "";
   let run: {
     id: string;
     worker: Worker;
     messages: number;
     stopped: boolean;
+    /** Set for runtime workers (BOOT); false until the code was sent. */
+    booted?: boolean;
+    started?: boolean;
+    outputChars: number;
+    /** Text output not yet sent, from one stream. */
+    pending: { level: string; text: string; elapsedMs: number } | null;
+    flushTimer: ReturnType<typeof setTimeout> | undefined;
   } | null = null;
 
   const send = (message: Record<string, unknown>) =>
@@ -362,13 +412,72 @@ function sandboxRelayMain(workerSource: string, config: RelayConfig) {
   function stop(reason?: string) {
     if (!run || run.stopped) return;
     run.stopped = true;
+    clearTimeout(run.flushTimer);
     run.worker.terminate();
     if (reason) send({ type: "LIMIT", runId: run.id, reason });
+  }
+
+  /** Send buffered text output as console entries of bounded size. */
+  function flushOutput() {
+    if (!run) return;
+    clearTimeout(run.flushTimer);
+    run.flushTimer = undefined;
+    const pending = run.pending;
+    run.pending = null;
+    if (!pending) return;
+    let text = pending.text;
+    while (text) {
+      let cut = text.length;
+      if (cut > config.outputBatchChars) {
+        const newline = text.lastIndexOf("\n", config.outputBatchChars);
+        cut = newline > 0 ? newline + 1 : config.outputBatchChars;
+      }
+      const chunk = text.slice(0, cut);
+      text = text.slice(cut);
+      // One trailing newline ends the entry; the rest is shown as is.
+      const value = chunk.endsWith("\n") ? chunk.slice(0, -1) : chunk;
+      send({
+        type: "LOG",
+        runId: run.id,
+        level: pending.level,
+        args: [{ t: "string", v: value }],
+        groupDepth: 0,
+        elapsedMs: pending.elapsedMs,
+      });
+    }
+  }
+
+  function queueOutput(stream: unknown, text: unknown, elapsedMs: unknown) {
+    if (!run || run.stopped || typeof text !== "string" || !text) return;
+    run.outputChars += text.length;
+    if (run.outputChars > config.maxOutputChars) {
+      flushOutput();
+      stop(
+        `Output limit reached (${Math.round(config.maxOutputChars / 1000)} K characters). The run was stopped.`,
+      );
+      return;
+    }
+    const level = stream === 2 ? "error" : "log";
+    if (run.pending && run.pending.level !== level) flushOutput();
+    run.pending ??= {
+      level,
+      text: "",
+      elapsedMs: typeof elapsedMs === "number" ? elapsedMs : 0,
+    };
+    run.pending.text += text;
+    if (run.pending.text.length >= config.outputBatchChars) flushOutput();
+    else run.flushTimer ??= setTimeout(flushOutput, config.outputFlushMs);
   }
 
   function forward(data: unknown) {
     if (!run || run.stopped || !data || typeof data !== "object") return;
     const message = data as Record<string, unknown>;
+    if (message.type === "OUT") {
+      queueOutput(message.stream, message.text, message.elapsedMs);
+      return;
+    }
+    // Everything else keeps its place after the output written before it.
+    flushOutput();
     if (message.type === "LOG" || message.type === "ERROR") {
       run.messages += 1;
       if (run.messages > config.maxMessages) {
@@ -415,8 +524,83 @@ function sandboxRelayMain(workerSource: string, config: RelayConfig) {
       }
       send(payload);
     } else if (message.type === "DONE") {
-      send({ type: "DONE", runId: run.id, elapsedMs: message.elapsedMs });
+      send({
+        type: "DONE",
+        runId: run.id,
+        elapsedMs: message.elapsedMs,
+        exitCode: message.exitCode,
+        inputMissing: message.inputMissing,
+      });
+    } else if (message.type === "BOOTED") {
+      run.booted = true;
+      send({ type: "BOOTED", runId: run.id, elapsedMs: message.elapsedMs });
+    } else if (message.type === "BOOT_ERROR") {
+      send({
+        type: "ERROR",
+        runId: run.id,
+        error: {
+          name: "SandboxError",
+          message: `The runtime could not start: ${String(message.message)}`,
+        },
+        elapsedMs: 0,
+      });
+      stop();
+      send({ type: "DONE", runId: run.id, elapsedMs: 0 });
     }
+  }
+
+  function fail(runId: string, message: string) {
+    send({
+      type: "ERROR",
+      runId,
+      error: { name: "SandboxError", message },
+      elapsedMs: 0,
+    });
+    send({ type: "DONE", runId, elapsedMs: 0 });
+  }
+
+  function startWorker(
+    runId: string,
+    url: string,
+    options: WorkerOptions,
+  ): NonNullable<typeof run> | null {
+    let worker: Worker;
+    try {
+      worker = new Worker(url, options);
+    } catch (error) {
+      fail(runId, `Could not start the execution worker: ${String(error)}`);
+      return null;
+    }
+    const current = {
+      id: runId,
+      worker,
+      messages: 0,
+      stopped: false,
+      outputChars: 0,
+      pending: null,
+      flushTimer: undefined,
+    };
+    run = current;
+    worker.addEventListener("message", (event) => forward(event.data));
+    worker.addEventListener("error", (event) => {
+      // User errors are handled inside the worker; this only fires when the
+      // worker itself could not start or crashed.
+      event.preventDefault();
+      if (current.stopped) return;
+      flushOutput();
+      send({
+        type: "ERROR",
+        runId,
+        error: {
+          name: "SandboxError",
+          message: event.message || "The execution worker failed.",
+        },
+        elapsedMs: 0,
+      });
+      stop();
+      send({ type: "DONE", runId, elapsedMs: 0 });
+    });
+    return current;
   }
 
   window.addEventListener("message", (event) => {
@@ -425,64 +609,62 @@ function sandboxRelayMain(workerSource: string, config: RelayConfig) {
     if (!data || typeof data !== "object" || data.channel !== config.channel)
       return;
 
-    if (data.type === "RUN") {
+    if (data.type === "BOOT") {
       if (
         run ||
         typeof data.runId !== "string" ||
-        typeof data.code !== "string"
+        typeof data.runtime !== "string" ||
+        !data.assets ||
+        typeof data.assets !== "object"
       )
         return;
-      const runId = data.runId;
-      if (data.code.length > config.maxCodeLength) {
-        send({
-          type: "ERROR",
-          runId,
-          error: {
-            name: "SandboxError",
-            message: `The code is too large to run (limit: ${config.maxCodeLength} characters).`,
-          },
-          elapsedMs: 0,
-        });
-        send({ type: "DONE", runId, elapsedMs: 0 });
-        return;
-      }
-      let worker: Worker;
-      try {
-        worker = new Worker(workerUrl, { name: "playground-run" });
-      } catch (error) {
-        send({
-          type: "ERROR",
-          runId,
-          error: {
-            name: "SandboxError",
-            message: `Could not start the execution worker: ${String(error)}`,
-          },
-          elapsedMs: 0,
-        });
-        send({ type: "DONE", runId, elapsedMs: 0 });
-        return;
-      }
-      const current = { id: runId, worker, messages: 0, stopped: false };
-      run = current;
-      worker.addEventListener("message", (event) => forward(event.data));
-      worker.addEventListener("error", (event) => {
-        // User errors are handled inside the worker; this only fires when the
-        // worker itself could not start or crashed.
-        event.preventDefault();
-        if (current.stopped) return;
-        send({
-          type: "ERROR",
-          runId,
-          error: {
-            name: "SandboxError",
-            message: event.message || "The execution worker failed.",
-          },
-          elapsedMs: 0,
-        });
-        stop();
-        send({ type: "DONE", runId, elapsedMs: 0 });
+      runtimeWorkerUrl ||= URL.createObjectURL(
+        new Blob([runtimeWorkerSource], { type: "text/javascript" }),
+      );
+      const current = startWorker(data.runId, runtimeWorkerUrl, {
+        name: `playground-${data.runtime}`,
       });
-      worker.postMessage({ type: "RUN", code: data.code });
+      if (!current) return;
+      current.booted = false;
+      current.started = false;
+      const assets = data.assets as Record<string, unknown>;
+      current.worker.postMessage(
+        { type: "BOOT", runtime: data.runtime, assets },
+        Object.values(assets).filter(
+          (value): value is ArrayBuffer => value instanceof ArrayBuffer,
+        ),
+      );
+    } else if (data.type === "RUN") {
+      if (typeof data.runId !== "string" || typeof data.code !== "string")
+        return;
+      const runId = data.runId;
+      const stdin = typeof data.stdin === "string" ? data.stdin : "";
+      if (
+        data.code.length > config.maxCodeLength ||
+        stdin.length > config.maxCodeLength
+      ) {
+        fail(
+          runId,
+          `The code is too large to run (limit: ${config.maxCodeLength} characters).`,
+        );
+        return;
+      }
+      // A booted runtime worker: hand it the program.
+      if (run && run.booted !== undefined) {
+        if (run.id !== runId || run.started || !run.booted || run.stopped)
+          return;
+        run.started = true;
+        const binary =
+          data.binary instanceof ArrayBuffer ? data.binary : undefined;
+        run.worker.postMessage(
+          { type: "RUN", code: data.code, stdin, binary },
+          binary ? [binary] : [],
+        );
+        return;
+      }
+      if (run) return;
+      const current = startWorker(runId, workerUrl, { name: "playground-run" });
+      current?.worker.postMessage({ type: "RUN", code: data.code });
     } else if (data.type === "STOP") {
       if (run && data.runId === run.id) stop();
     }
@@ -514,6 +696,26 @@ export function buildWorkerSource(): string {
   return `"use strict";(${sandboxWorkerMain.toString()})(${importModule}, (${serializeValue.toString()}), ${JSON.stringify(workerConfig)});`;
 }
 
+/**
+ * Source of the worker that runs every other language. Tests may pass their
+ * own (self-contained) drivers.
+ */
+export function buildRuntimeWorkerSource(
+  drivers: Record<string, DriverFactory> = DRIVERS,
+): string {
+  const config: RuntimeWorkerConfig = {
+    virtualOrigin: RUNTIME_VIRTUAL_ORIGIN,
+    maxStackLength: RUNTIME_LIMITS.maxStackLength,
+    maxMessageLength: RUNTIME_LIMITS.serialize.maxStringLength,
+  };
+  const sources = Object.entries(drivers)
+    .map(([id, driver]) => `${JSON.stringify(id)}: (${driver.toString()})`)
+    .join(",\n");
+  // See buildWorkerSource for why `import()` lives in a string.
+  const importModule = "(url) => import(url)";
+  return `(${runtimeWorkerMain.toString()})(${importModule}, ${JSON.stringify(config)}, {${sources}});`;
+}
+
 /** Build the sandbox page. `sha256` must return the base64 SHA-256 digest of its input. */
 export function buildSandboxDocument(
   sha256: (input: string) => string,
@@ -523,10 +725,14 @@ export function buildSandboxDocument(
     maxMessages: RUNTIME_LIMITS.maxMessages,
     maxMessageBytes: RUNTIME_LIMITS.maxMessageBytes,
     maxCodeLength: RUNTIME_LIMITS.maxCodeLength,
+    maxOutputChars: RUNTIME_LIMITS.maxOutputChars,
+    outputBatchChars: RUNTIME_LIMITS.outputBatchChars,
+    outputFlushMs: RUNTIME_LIMITS.outputFlushMs,
   };
 
   const workerSource = buildWorkerSource();
-  const script = `"use strict";(${sandboxRelayMain.toString()})(${JSON.stringify(workerSource)}, ${JSON.stringify(relayConfig)});`;
+  const runtimeWorkerSource = buildRuntimeWorkerSource();
+  const script = `"use strict";(${sandboxRelayMain.toString()})(${JSON.stringify(workerSource)}, ${JSON.stringify(runtimeWorkerSource)}, ${JSON.stringify(relayConfig)});`;
 
   if (/<\/script|<!--/i.test(script)) {
     throw new Error(

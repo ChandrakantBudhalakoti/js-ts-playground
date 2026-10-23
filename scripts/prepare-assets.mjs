@@ -5,6 +5,10 @@
 // 2. the TypeScript lib .d.ts files the compiler worker needs (the roots in
 //    src/lib/compiler/lib-roots.json plus everything they reference)
 //                                         -> public/vendor/typescript/<version>/lib.json
+// 3. the WebAssembly language runtimes and Clang listed in
+//    src/lib/runtime/runtime-assets.json, gzipped (the app decompresses them,
+//    so transfers stay small whatever the host does), with an index.json of
+//    file sizes                           -> public/vendor/runtimes/<id>/<version>/
 //
 // Runs on predev and prebuild (strict), and on postinstall with --optional:
 // a production-only install (`npm ci --omit=dev`) has no `typescript`, and
@@ -21,18 +25,22 @@ import {
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
 const vendor = join(root, "public", "vendor");
 
-// Some packages' "exports" maps hide package.json, so walk up from the entry point.
+// Some packages' "exports" maps hide package.json, so walk up from the entry
+// point; others have no entry point at all, but expose package.json.
 function findPackageRoot(name) {
-  for (
-    let dir = dirname(require.resolve(name));
-    dir !== dirname(dir);
-    dir = dirname(dir)
-  ) {
+  let entry;
+  try {
+    entry = require.resolve(name);
+  } catch {
+    return dirname(require.resolve(`${name}/package.json`));
+  }
+  for (let dir = dirname(entry); dir !== dirname(dir); dir = dirname(dir)) {
     const candidate = join(dir, "package.json");
     if (
       existsSync(candidate) &&
@@ -105,11 +113,97 @@ function bundleTypeScriptLibs() {
   );
 }
 
+/** `{ [published name]: path in the package }` for a spec's files and directories. */
+function runtimeFiles(packageRoot, spec) {
+  const files = { ...spec.files };
+  for (const [prefix, { from, exclude }] of Object.entries(
+    spec.directories ?? {},
+  )) {
+    const skip = exclude ? new RegExp(exclude) : null;
+    const walk = (dir) => {
+      for (const entry of readdirSync(join(packageRoot, from, dir), {
+        withFileTypes: true,
+      })) {
+        const relative = dir ? `${dir}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) walk(relative);
+        else if (!skip?.test(relative))
+          files[`${prefix}/${relative}`] = `${from}/${relative}`;
+      }
+    };
+    walk("");
+  }
+  return files;
+}
+
+function copyRuntime(id, spec) {
+  const packageRoot = findPackageRoot(spec.package);
+  const version = versionOf(packageRoot);
+  if (version !== spec.version) {
+    throw new Error(
+      `${spec.package} ${version} is installed, but src/lib/runtime/runtime-assets.json expects ${spec.version}. ` +
+        "Update the version there (the runtime drivers are tested against it).",
+    );
+  }
+  const outDir = join(vendor, "runtimes", id, version);
+  prune(join(vendor, "runtimes", id), version);
+  const indexPath = join(outDir, "index.json");
+  const sources = runtimeFiles(packageRoot, spec);
+  const names = Object.keys(sources);
+  if (existsSync(indexPath)) {
+    const index = JSON.parse(readFileSync(indexPath, "utf8"));
+    const published = Object.keys(index.files);
+    if (
+      published.length === names.length &&
+      names.every((name) => name in index.files)
+    ) {
+      console.log(`${spec.package} ${version}: up to date`);
+      return;
+    }
+    // The file list changed: start this version over.
+    rmSync(outDir, { recursive: true, force: true });
+  }
+  mkdirSync(outDir, { recursive: true });
+  const plain = new Set(spec.uncompressed ?? []);
+  const files = {};
+  for (const [name, source] of Object.entries(sources)) {
+    const bytes = readFileSync(join(packageRoot, source));
+    mkdirSync(dirname(join(outDir, name)), { recursive: true });
+    if (plain.has(name)) {
+      writeFileSync(join(outDir, name), bytes);
+      files[name] = { size: bytes.length };
+    } else {
+      const gzipped = gzipSync(bytes, { level: 9 });
+      writeFileSync(join(outDir, `${name}.gz`), gzipped);
+      files[name] = { size: bytes.length, gzip: gzipped.length };
+    }
+  }
+  // Written last: its presence marks a complete copy.
+  writeFileSync(indexPath, JSON.stringify({ version, files }));
+  const total = Object.values(files).reduce(
+    (sum, file) => sum + (file.gzip ?? file.size),
+    0,
+  );
+  console.log(
+    `${spec.package} ${version}: copied ${names.length} files to public/vendor/runtimes/${id}/${version} (${(total / 1e6).toFixed(1)} MB)`,
+  );
+}
+
 const optional = process.argv.includes("--optional");
+
+const runtimeSpecs = JSON.parse(
+  readFileSync(
+    join(root, "src", "lib", "runtime", "runtime-assets.json"),
+    "utf8",
+  ),
+);
 
 for (const [name, step] of [
   ["monaco-editor", copyMonaco],
   ["typescript", bundleTypeScriptLibs],
+  ...Object.entries(runtimeSpecs).map(([id, spec]) => [
+    spec.package,
+    () => copyRuntime(id, spec),
+  ]),
 ]) {
   try {
     step();

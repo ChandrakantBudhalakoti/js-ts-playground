@@ -1,5 +1,5 @@
 import type * as TS from "typescript";
-import type { Diagnostic, Language } from "@/types/playground";
+import type { Diagnostic, ScriptLanguage } from "@/types/playground";
 import { mergeDiagnostics, normalizeDiagnostic } from "./diagnostics";
 import { FILE_NAMES, SHARED_COMPILER_OPTIONS } from "./options";
 
@@ -16,9 +16,9 @@ export interface CompileResult {
 export interface CompilerService {
   readonly version: string;
   /** Syntactic, semantic and option diagnostics for the code. */
-  check(code: string, language: Language): Diagnostic[];
+  check(code: string, language: ScriptLanguage): Diagnostic[];
   /** Diagnostics plus executable JavaScript (via `ts.transpileModule` for TypeScript). */
-  compile(code: string, language: Language): CompileResult;
+  compile(code: string, language: ScriptLanguage): CompileResult;
 }
 
 const SOURCE_MAPPING_URL = /\n?\/\/# sourceMappingURL=.*\s*$/;
@@ -35,7 +35,7 @@ export function createCompilerService(
 ): CompilerService {
   const registry = ts.createDocumentRegistry(true, "/");
   const libSnapshots = new Map<string, TS.IScriptSnapshot>();
-  const services = new Map<Language, ReturnType<typeof createService>>();
+  const services = new Map<ScriptLanguage, ReturnType<typeof createService>>();
 
   const compilerOptions: TS.CompilerOptions = {
     ...SHARED_COMPILER_OPTIONS,
@@ -60,7 +60,7 @@ export function createCompilerService(
     return snapshot;
   }
 
-  function createService(language: Language) {
+  function createService(language: ScriptLanguage) {
     const fileName = `/${FILE_NAMES[language]}`;
     const state = {
       text: "",
@@ -125,7 +125,7 @@ export function createCompilerService(
     return { update, diagnostics };
   }
 
-  function getService(language: Language) {
+  function getService(language: ScriptLanguage) {
     let service = services.get(language);
     if (!service) {
       service = createService(language);
@@ -134,13 +134,13 @@ export function createCompilerService(
     return service;
   }
 
-  function check(code: string, language: Language): Diagnostic[] {
+  function check(code: string, language: ScriptLanguage): Diagnostic[] {
     const service = getService(language);
     service.update(code);
     return service.diagnostics();
   }
 
-  function compile(code: string, language: Language): CompileResult {
+  function compile(code: string, language: ScriptLanguage): CompileResult {
     const checked = check(code, language);
     if (language === "javascript") {
       return { js: code, sourceMap: null, diagnostics: checked };

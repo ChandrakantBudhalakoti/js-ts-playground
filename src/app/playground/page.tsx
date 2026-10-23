@@ -2,9 +2,9 @@ import { Playground } from "@/components/playground/Playground";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata = pageMetadata({
-  title: "Online JavaScript & TypeScript Editor",
+  title: "Online Code Editor and Compiler",
   description:
-    "Open the JS/TS Playground editor: write JavaScript or TypeScript with autocomplete and live type checking, then run it in a sandbox and see the console output.",
+    "Write and run Python, C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua or R in your browser, with an editor and console that work on phones and tablets.",
   path: "/playground",
 });
 

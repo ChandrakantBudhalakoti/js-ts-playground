@@ -12,6 +12,8 @@ interface ConsolePanelProps {
   entries: ConsoleEntryData[];
   dropped: number;
   onNavigate: (location: SourceLocation) => void;
+  /** Shown while the console is empty, e.g. a runtime's first download. */
+  hint?: string;
 }
 
 /** Distance from the bottom (px) within which new output keeps the view pinned. */
@@ -21,6 +23,7 @@ export function ConsolePanel({
   entries,
   dropped,
   onNavigate,
+  hint,
 }: ConsolePanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
@@ -35,6 +38,11 @@ export function ConsolePanel({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
         <Terminal className="size-5 opacity-60" aria-hidden />
+        {hint && (
+          <p className="max-w-xs text-xs" data-testid="console-hint">
+            {hint}
+          </p>
+        )}
         <p>
           Press <span className="font-medium text-foreground">Run</span> to see
           your code&apos;s output here.

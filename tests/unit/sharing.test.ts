@@ -1,5 +1,6 @@
 import { deflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
+import { LANGUAGES } from "@/lib/languages";
 import {
   decodeShareHash,
   encodeShareHash,
@@ -64,6 +65,30 @@ describe("share links", () => {
     ).rejects.toThrow(/corrupted/);
   });
 
+  it("round-trips every language, with standard input when there is some", async () => {
+    for (const { id } of LANGUAGES) {
+      const doc = { language: id, code: `code in ${id}`, stdin: "1 2\n3\n" };
+      expect(await decodeShareHash(await encodeShareHash(doc))).toEqual(doc);
+      const plain = { language: id, code: "no input" };
+      const hash = await encodeShareHash({ ...plain, stdin: "" });
+      expect(hash).not.toContain("&in=");
+      expect(await decodeShareHash(hash)).toEqual(plain);
+    }
+  });
+
+  it("keeps the language codes of existing links", async () => {
+    const hash = await encodeShareHash({ language: "python", code: "x" });
+    expect(hash.startsWith("lang=py&")).toBe(true);
+    expect(
+      (await encodeShareHash({ language: "javascript", code: "x" })).startsWith(
+        "lang=js&",
+      ),
+    ).toBe(true);
+    await expect(decodeShareHash("#lang=cobol&code=")).rejects.toThrow(
+      /unknown language/,
+    );
+  });
+
   it("refuses decompression bombs and oversized code", async () => {
     const bomb = toBase64Url(
       deflateRawSync(Buffer.alloc(MAX_SHARED_CODE_LENGTH * 4, 0x61)),
@@ -76,6 +101,10 @@ describe("share links", () => {
         language: "javascript",
         code: "x".repeat(MAX_SHARED_CODE_LENGTH + 1),
       }),
+    ).rejects.toBeInstanceOf(ShareError);
+    // Code and input share the size limit.
+    await expect(
+      decodeShareHash(`#lang=py&code=${bomb.slice(0, 10)}&in=${bomb}`),
     ).rejects.toBeInstanceOf(ShareError);
   });
 });

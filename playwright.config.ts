@@ -31,7 +31,7 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /mobile\.spec/,
+      testIgnore: /(mobile|languages)\.spec/,
     },
     // The sandbox relies on browser-specific worker/CSP behaviour, so the
     // runtime suite also runs in Firefox.
@@ -40,10 +40,32 @@ export default defineConfig({
       use: { ...devices["Desktop Firefox"] },
       testMatch: /runtime\.spec/,
     },
+    // Phones and tablets are the main audience: touch screens, small and
+    // medium viewports (both in Chromium, which CI installs).
     {
       name: "mobile",
       use: { ...devices["Pixel 7"] },
       testMatch: /mobile\.spec/,
+    },
+    {
+      name: "tablet",
+      use: { ...devices["iPad (gen 7)"], browserName: "chromium" },
+      testMatch: /mobile\.spec/,
+    },
+    // Every language's runtime, in Chromium and Firefox. These compile C++
+    // and boot interpreters, so they start once the other suites are done:
+    // run alongside them, they would slow timing-sensitive tests.
+    {
+      name: "languages-chromium",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /languages\.spec/,
+      dependencies: ["chromium", "firefox", "mobile", "tablet"],
+    },
+    {
+      name: "languages-firefox",
+      use: { ...devices["Desktop Firefox"] },
+      testMatch: /languages\.spec/,
+      dependencies: ["chromium", "firefox", "mobile", "tablet"],
     },
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL

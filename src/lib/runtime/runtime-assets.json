@@ -1,0 +1,76 @@
+{
+  "python": {
+    "package": "pyodide",
+    "version": "314.0.7",
+    "files": {
+      "pyodide.mjs": "pyodide.mjs",
+      "pyodide.asm.mjs": "pyodide.asm.mjs",
+      "pyodide.asm.wasm": "pyodide.asm.wasm",
+      "python_stdlib.zip": "python_stdlib.zip",
+      "pyodide-lock.json": "pyodide-lock.json"
+    }
+  },
+  "lua": {
+    "package": "wasmoon",
+    "version": "1.16.0",
+    "files": {
+      "wasmoon.js": "dist/index.js",
+      "glue.wasm": "dist/glue.wasm"
+    }
+  },
+  "ruby": {
+    "package": "@ruby/3.4-wasm-wasi",
+    "version": "2.10.1",
+    "files": {
+      "ruby-wasm-wasi.js": "dist/browser.umd.js",
+      "ruby.wasm": "dist/ruby+stdlib.wasm"
+    }
+  },
+  "php": {
+    "package": "@php-wasm/web-8-4",
+    "version": "3.1.60",
+    "files": {
+      "php.js": "asyncify/php_8_4.js",
+      "php.wasm": "asyncify/8_4_25/php_8_4.wasm"
+    }
+  },
+  "go": {
+    "package": "yaegi-wasm",
+    "version": "1.0.2",
+    "files": {
+      "wasm_exec.js": "src/wasm_exec.js",
+      "yaegi.wasm": "src/yaegi-browser.wasm"
+    }
+  },
+  "r": {
+    "package": "webr",
+    "version": "0.6.0",
+    "files": {
+      "webr.mjs": "dist/webr.js",
+      "webr-worker.js": "dist/webr-worker.js",
+      "R.js": "dist/R.js",
+      "R.wasm": "dist/R.wasm",
+      "libRblas.so": "dist/libRblas.so",
+      "libRlapack.so": "dist/libRlapack.so"
+    },
+    "directories": {
+      "vfs": {
+        "from": "dist/vfs",
+        "exclude": "(^|/)(help|html|doc|demo)[./]|translations/(?!DESCRIPTION$)|translations\\.|/fonts/|share/(proj|gdal|udunits)|tcltk|katex|etc/ssl|grDevices/(afm|fonts)"
+      }
+    }
+  },
+  "clang": {
+    "package": "@yowasp/clang",
+    "version": "22.0.0-git20542-10",
+    "files": {
+      "bundle.js": "gen/bundle.js",
+      "llvm.core.wasm": "gen/llvm.core.wasm",
+      "llvm.core2.wasm": "gen/llvm.core2.wasm",
+      "llvm.core3.wasm": "gen/llvm.core3.wasm",
+      "llvm.core4.wasm": "gen/llvm.core4.wasm",
+      "llvm-resources.tar": "gen/llvm-resources.tar"
+    },
+    "uncompressed": ["bundle.js"]
+  }
+}

@@ -57,10 +57,18 @@ function parseSettings(value: unknown): EditorSettings | null {
   };
 }
 
+/** Phones wrap long lines by default: scrolling sideways is awkward there. */
+function deviceDefaults(): EditorSettings {
+  return window.matchMedia("(max-width: 639px)").matches
+    ? { ...DEFAULT_SETTINGS, wordWrap: true }
+    : DEFAULT_SETTINGS;
+}
+
 const store = createPersistentStore(
   STORAGE_KEYS.settings,
   DEFAULT_SETTINGS,
   parseSettings,
+  deviceDefaults,
 );
 
 /** Editor and runtime preferences, persisted in this browser. */

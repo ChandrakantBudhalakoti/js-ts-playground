@@ -3,9 +3,11 @@ import { encodeShareHash } from "../../src/lib/sharing/encode-code";
 import {
   answerDialog,
   consoleOutput,
+  expectLanguage,
   expectStatus,
   openPlayground,
   run,
+  selectLanguage,
   setCode,
 } from "./helpers";
 
@@ -20,9 +22,14 @@ test.describe("regressions", () => {
   test("Run uses the saved document while the editor is still loading", async ({
     page,
   }) => {
-    // Hold Monaco back so the editor is not mounted when Run is pressed.
+    // Hold Monaco back until Run has been checked, so the editor is not
+    // mounted when Run is pressed (however long the checker takes to load).
+    let releaseMonaco = () => {};
+    const monacoHeld = new Promise<void>(
+      (resolve) => (releaseMonaco = resolve),
+    );
     await page.route("**/vendor/monaco/**/loader.js", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 5_000));
+      await monacoHeld;
       await route.continue();
     });
     await page.addInitScript(() =>
@@ -45,6 +52,7 @@ test.describe("regressions", () => {
     await expectStatus(page, "completed");
     await expect(consoleOutput(page)).toContainText("ran before Monaco loaded");
     await expect(consoleOutput(page)).not.toContainText("Nothing to run");
+    releaseMonaco();
   });
 
   test("console calls with more than 50 arguments are shown, not dropped", async ({
@@ -92,9 +100,7 @@ test.describe("regressions", () => {
     await page.getByRole("button", { name: "Examples" }).click();
     await page.getByRole("menuitem", { name: /JavaScript basics/ }).click();
     await answerDialog(page, "Replace", "JavaScript basics");
-    await expect(
-      page.getByRole("radio", { name: "JavaScript" }),
-    ).toHaveAttribute("data-state", "on");
+    await expectLanguage(page, "JavaScript");
     await expect(editorLines(page)).toContainText("Hello from");
 
     await editorLines(page).first().click();
@@ -114,9 +120,7 @@ test.describe("regressions", () => {
     await answerDialog(page, "Replace", "JavaScript basics");
     await page.getByRole("button", { name: "Undo" }).click();
     await expect(editorLines(page)).toContainText("const mine: number = 2;");
-    await expect(
-      page.getByRole("radio", { name: "TypeScript" }),
-    ).toHaveAttribute("data-state", "on");
+    await expectLanguage(page, "TypeScript");
   });
 
   test("a share link pasted into the address bar asks before replacing work", async ({
@@ -222,7 +226,7 @@ test.describe("regressions", () => {
       name: /Go to main\.ts/,
     });
     await expect(link).toHaveText(/^main\.ts:2:/);
-    await page.getByRole("radio", { name: "JavaScript" }).click();
+    await selectLanguage(page, "JavaScript");
     await expect(link).toHaveText(/^main\.ts:2:/);
   });
 });

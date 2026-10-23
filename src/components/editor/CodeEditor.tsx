@@ -14,6 +14,7 @@ import {
   useState,
   type Ref,
 } from "react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   configureMonaco,
   MARKER_OWNER,
@@ -35,7 +36,23 @@ export interface CodeEditorHandle {
   revealPosition(line: number, column: number): void;
   focus(): void;
   format(): Promise<void>;
+  /** A key from the on-screen code keys (touch screens), as if typed. */
+  pressKey(key: CodeKey): void;
 }
+
+/** Text to type, or an editor command (Tab, arrows, undo). */
+export type CodeKey =
+  | { text: string }
+  | {
+      command:
+        | "tab"
+        | "cursorLeft"
+        | "cursorRight"
+        | "cursorUp"
+        | "cursorDown"
+        | "undo"
+        | "redo";
+    };
 
 interface CodeEditorProps {
   ref?: Ref<CodeEditorHandle>;
@@ -194,6 +211,16 @@ export default function CodeEditor({
         editor.focus();
       },
       focus: () => editorRef.current?.focus(),
+      pressKey: (key: CodeKey) => {
+        const editor = editorRef.current;
+        if (!editor) return;
+        editor.focus();
+        // As keyboard input, "type" goes through auto-closing brackets and
+        // auto-indent, like a key on a real keyboard.
+        if ("text" in key)
+          editor.trigger("keyboard", "type", { text: key.text });
+        else editor.trigger("keyboard", key.command, null);
+      },
       format: async () => {
         await editorRef.current
           ?.getAction("editor.action.formatDocument")
@@ -202,6 +229,11 @@ export default function CodeEditor({
     }),
     [],
   );
+
+  // Phones get a slimmer gutter; touch screens keep the native long-press
+  // menu and selection instead of Monaco's context menu and text dragging.
+  const compact = useMediaQuery("(max-width: 639px)") === true;
+  const touch = useMediaQuery("(pointer: coarse)") === true;
 
   const options = useMemo(
     () => ({
@@ -215,8 +247,12 @@ export default function CodeEditor({
       wordWrap: settings.wordWrap ? ("on" as const) : ("off" as const),
       automaticLayout: true,
       scrollBeyondLastLine: false,
-      padding: { top: 12, bottom: 12 },
-      lineNumbersMinChars: 3,
+      padding: { top: compact ? 8 : 12, bottom: 12 },
+      lineNumbersMinChars: compact ? 2 : 3,
+      lineDecorationsWidth: compact ? 6 : 10,
+      folding: !compact,
+      contextmenu: !touch,
+      dragAndDrop: !touch,
       renderLineHighlight: "all" as const,
       smoothScrolling: true,
       cursorBlinking: "smooth" as const,
@@ -235,7 +271,14 @@ export default function CodeEditor({
       stickyScroll: { enabled: false },
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     }),
-    [settings.fontSize, settings.tabSize, settings.minimap, settings.wordWrap],
+    [
+      settings.fontSize,
+      settings.tabSize,
+      settings.minimap,
+      settings.wordWrap,
+      compact,
+      touch,
+    ],
   );
 
   if (loadError) {

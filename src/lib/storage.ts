@@ -37,17 +37,19 @@ export const STORAGE_KEYS = {
 /**
  * A tiny external store persisted to localStorage, for `useSyncExternalStore`.
  * The server snapshot is always `defaults`, so hydration stays deterministic.
+ * `clientDefaults` can adapt the defaults to the device when nothing is saved.
  */
 export function createPersistentStore<T>(
   key: string,
   defaults: T,
   parse: (value: unknown) => T | null,
+  clientDefaults?: () => T,
 ) {
   let value: T | undefined;
   const listeners = new Set<() => void>();
 
   function getSnapshot(): T {
-    value ??= readJson(key, parse) ?? defaults;
+    value ??= readJson(key, parse) ?? clientDefaults?.() ?? defaults;
     return value;
   }
 

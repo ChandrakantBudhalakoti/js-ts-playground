@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getAssetCache } from "@/hooks/useRuntimeAssets";
 import { createPositionMapper } from "@/lib/compiler/source-map";
 import {
   appendEntries,
@@ -14,11 +15,19 @@ import type {
   ConsoleEntry,
   ConsoleLevel,
   ExecutionStatus,
+  RuntimeId,
 } from "@/types/playground";
 
 export interface RunRequest {
-  /** JavaScript to execute. */
+  runtime: RuntimeId;
+  /** JavaScript to execute, or the program's source for other runtimes. */
   code: string;
+  /** Standard input (non-JavaScript runtimes). */
+  stdin?: string;
+  /** A program compiled by Clang (the `wasi` runtime). */
+  binary?: ArrayBuffer;
+  /** Shown while the run waits for its runtime to start, e.g. "Python". */
+  runtimeName: string;
   fileName: string;
   sourceMap: string | null;
   timeoutMs: number;
@@ -47,7 +56,9 @@ export function useCodeExecution(sandboxUrl: string) {
   const [durationMs, setDurationMs] = useState<number | null>(null);
 
   const runtimeRef = useRef<SandboxRuntime | null>(null);
-  const contextRef = useRef<(RunContext & { hadError: boolean }) | null>(null);
+  const contextRef = useRef<
+    (RunContext & { hadError: boolean; runtimeName: string }) | null
+  >(null);
   const nextId = useRef(1);
   const buffer = useRef<ConsoleEntry[]>([]);
   const frame = useRef<number | null>(null);
@@ -91,6 +102,9 @@ export function useCodeExecution(sandboxUrl: string) {
         );
 
       switch (event.type) {
+        case "booting":
+          system("debug", `Starting ${context.runtimeName}…`);
+          break;
         case "log":
           push(
             createLogEntry(
@@ -111,16 +125,30 @@ export function useCodeExecution(sandboxUrl: string) {
             current === "completed" ? "failed" : current,
           );
           break;
-        case "done":
-          setStatus(context.hadError ? "failed" : "completed");
+        case "done": {
+          // A non-zero exit status fails the run, like in a terminal.
+          const exitCode = event.exitCode ?? 0;
+          const failed = context.hadError || exitCode !== 0;
+          if (event.inputMissing)
+            system(
+              "info",
+              "The program read standard input, but the Input panel is empty.",
+              event.elapsedMs,
+            );
+          setStatus(failed ? "failed" : "completed");
           setDurationMs(event.elapsedMs);
           system(
             "debug",
-            `${context.hadError ? "Finished with errors" : "Completed"} in ${formatDuration(event.elapsedMs)}`,
+            context.hadError
+              ? `Finished with errors in ${formatDuration(event.elapsedMs)}`
+              : exitCode !== 0
+                ? `Exited with code ${exitCode} after ${formatDuration(event.elapsedMs)}`
+                : `Completed in ${formatDuration(event.elapsedMs)}`,
             event.elapsedMs,
-            context.hadError ? undefined : "success",
+            failed ? undefined : "success",
           );
           break;
+        }
         case "timeout":
           setStatus("timed-out");
           system(
@@ -147,7 +175,12 @@ export function useCodeExecution(sandboxUrl: string) {
   );
 
   useEffect(() => {
-    const runtime = new SandboxRuntime({ sandboxUrl, onEvent: handleEvent });
+    const runtime = new SandboxRuntime({
+      sandboxUrl,
+      onEvent: handleEvent,
+      loadAssets: (id) => getAssetCache().load(id),
+      prewarm: true,
+    });
     runtimeRef.current = runtime;
     return () => {
       runtime.dispose();
@@ -167,12 +200,20 @@ export function useCodeExecution(sandboxUrl: string) {
       const runtime = runtimeRef.current;
       if (!runtime) return;
       if (request.clearConsole) clear();
-      const runId = runtime.run(request.code, request.timeoutMs);
+      const runId = runtime.run({
+        runtime: request.runtime,
+        code: request.code,
+        timeoutMs: request.timeoutMs,
+        stdin: request.stdin,
+        binary: request.binary,
+      });
       contextRef.current = {
         runId,
         fileName: request.fileName,
         mapper: createPositionMapper(request.sourceMap),
+        javascript: request.runtime === "js",
         hadError: false,
+        runtimeName: request.runtimeName,
       };
       if (!request.clearConsole)
         push(createSystemEntry(id(), runId, "debug", "Run started"));
@@ -181,6 +222,15 @@ export function useCodeExecution(sandboxUrl: string) {
       }
       setStatus("running");
       setDurationMs(null);
+    },
+    [clear, push],
+  );
+
+  /** Show a note while a run is being prepared (e.g. "Compiling main.c…"). */
+  const announce = useCallback(
+    (message: string, clearConsole: boolean) => {
+      if (clearConsole) clear();
+      push(createSystemEntry(id(), "local", "debug", message));
     },
     [clear, push],
   );
@@ -205,6 +255,12 @@ export function useCodeExecution(sandboxUrl: string) {
 
   const stop = useCallback(() => runtimeRef.current?.stop(), []);
 
+  /** Download and boot a runtime ahead of its first run. */
+  const prepare = useCallback(
+    (runtime: RuntimeId) => runtimeRef.current?.prepare(runtime),
+    [],
+  );
+
   /** Stop any run and return to a clean, idle state. */
   const resetState = useCallback(() => {
     contextRef.current = null;
@@ -221,6 +277,8 @@ export function useCodeExecution(sandboxUrl: string) {
     durationMs,
     run,
     stop,
+    prepare,
+    announce,
     clear,
     report,
     resetState,

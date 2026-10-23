@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { LANGUAGES } from "@/lib/languages";
 import { REPO_URL, SITE_NAME } from "@/lib/site";
 import { PlaygroundLink } from "./PlaygroundLink";
 
 const PAGES = [
-  { href: "/javascript", label: "JavaScript playground" },
-  { href: "/typescript", label: "TypeScript playground" },
+  { href: "/languages", label: "All languages" },
+  ...LANGUAGES.map((info) => ({ href: info.path, label: info.name })),
   { href: "/examples", label: "Examples" },
 ];
 
@@ -23,11 +24,12 @@ export function SiteFooter() {
         <div className="space-y-2">
           <p className="font-semibold">{SITE_NAME}</p>
           <p className="text-muted-foreground">
-            Free and open source under the MIT license.
+            Free for every learner, on any device. Open source under the MIT
+            license.
           </p>
         </div>
         <nav aria-label="Pages">
-          <ul className="space-y-2">
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
             <li>
               <PlaygroundLink className={LINK}>Playground</PlaygroundLink>
             </li>
