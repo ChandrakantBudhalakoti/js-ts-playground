@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { LOAD_FAILURE_SCRIPT } from "@/lib/load-failure";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -53,6 +54,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        {/* First, so it sees every script that fails to download. */}
+        <script dangerouslySetInnerHTML={{ __html: LOAD_FAILURE_SCRIPT }} />
         <meta
           name="google-site-verification"
           content="yKOHr6XY2H0EL2VwtjjFDZkJFklTn1Ec6zig88enJ1Y"

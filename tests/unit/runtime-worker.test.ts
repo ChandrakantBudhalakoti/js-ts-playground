@@ -4,7 +4,7 @@ import type { DriverHost } from "@/lib/runtime/drivers/types";
 import { buildRuntimeWorkerSource } from "@/lib/runtime/sandbox-document";
 
 type Message = Record<string, unknown>;
-type Listener = (event: { data?: unknown }) => void;
+type Listener = (event: { data?: unknown; ports?: unknown[] }) => void;
 
 /**
  * A driver that exercises the worker's services. Self-contained, like real
@@ -61,11 +61,14 @@ function probeDriver(host: DriverHost) {
 }
 
 function startRuntimeWorker() {
+  /** Reports sent through the private port that came with BOOT. */
   const posted: Message[] = [];
+  /** Anything sent with the worker's own postMessage (never read by the relay). */
+  const unsafe: Message[] = [];
   const listeners: Record<string, Listener[]> = {};
   const quiet = () => {};
   const scope: Record<string, unknown> = {
-    postMessage: (message: Message) => posted.push(structuredClone(message)),
+    postMessage: (message: Message) => unsafe.push(structuredClone(message)),
     addEventListener: (type: string, listener: Listener) =>
       (listeners[type] ??= []).push(listener),
     console: {
@@ -95,8 +98,11 @@ function startRuntimeWorker() {
     "(text) => { const bytes = new TextEncoder().encode(text); const copy = new Uint8Array(bytes.length); copy.set(bytes); return copy.buffer; }",
     context,
   ) as (text: string) => ArrayBuffer;
+  const port = {
+    postMessage: (message: Message) => posted.push(structuredClone(message)),
+  };
   const send = (data: Message) =>
-    listeners.message?.forEach((listener) => listener({ data }));
+    listeners.message?.forEach((listener) => listener({ data, ports: [port] }));
   const next = async (type: string) => {
     for (let i = 0; i < 200; i++) {
       const found = posted.find((message) => message.type === type);
@@ -110,7 +116,7 @@ function startRuntimeWorker() {
       .filter((message) => message.type === "OUT" && message.stream === stream)
       .map((message) => message.text)
       .join("");
-  return { posted, send, next, output, buffer };
+  return { posted, unsafe, send, next, output, buffer };
 }
 
 describe("runtime worker", () => {
@@ -138,6 +144,8 @@ describe("runtime worker", () => {
     expect(stdout).toContain("stdin: abc|def\n");
     expect(stdout).toContain("importScripts throws: true\n");
     expect(worker.output(2)).toBe("€\n");
+    // Everything went through the private port.
+    expect(worker.unsafe).toEqual([]);
   });
 
   it("reports errors with their location and the exit status", async () => {

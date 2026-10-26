@@ -352,13 +352,14 @@ server-side execution service.
 
 ## Security model and production setup
 
-| Layer            | Control                                                                                                                                                                                                                          |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| iframe           | `sandbox="allow-scripts"` (never with `allow-same-origin`), `referrerpolicy="no-referrer"`, hidden, recreated per run                                                                                                            |
-| Sandbox response | `Content-Security-Policy: default-src 'none'; script-src 'sha256-…' blob: 'unsafe-eval'; worker-src blob:; connect-src 'none'; …; frame-ancestors …; sandbox allow-scripts`, plus `nosniff`, `no-referrer`, `Permissions-Policy` |
-| App response     | CSP with `frame-src` limited to the sandbox origin, `object-src 'none'`, `frame-ancestors 'none'`, no `unsafe-eval` in production (only `'wasm-unsafe-eval'`, for the Clang worker), `X-Frame-Options: DENY`                     |
-| Messages         | Source, origin, channel, run-ID, schema and size validation (`parseRuntimeMessage`)                                                                                                                                              |
-| Output           | Rendered as React text nodes. User output is never inserted as HTML                                                                                                                                                              |
+| Layer            | Control                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| iframe           | `sandbox="allow-scripts"` (never with `allow-same-origin`), `referrerpolicy="no-referrer"`, hidden, recreated per run                                                                                                                                                                                                                                                               |
+| Sandbox response | `Content-Security-Policy: default-src 'none'; script-src 'sha256-…' blob: 'unsafe-eval'; worker-src blob:; connect-src 'none'; …; frame-ancestors …; sandbox allow-scripts`, plus `nosniff`, `no-referrer`, `Permissions-Policy`                                                                                                                                                    |
+| App response     | CSP with `frame-src` limited to the sandbox origin, `script-src-attr 'none'` (no inline event handlers), `object-src 'none'`, `frame-ancestors 'none'`, no `unsafe-eval` in production (only `'wasm-unsafe-eval'`, for the Clang worker), `X-Frame-Options: DENY`, `Cross-Origin-Opener-Policy: same-origin`, HSTS; `/vendor` files are `Cross-Origin-Resource-Policy: same-origin` |
+| Messages         | Source, origin, channel, run-ID, schema and size validation (`parseRuntimeMessage`). Workers report to the relay through a private `MessageChannel` port, so code cannot forge reports with `postMessage`; every console entry counts toward the per-run limit                                                                                                                      |
+| Compilers        | A TypeScript check or compile is stopped after 20 s, a Clang one after 60 s; the stuck worker is replaced, so a share link with pathological code cannot freeze the playground. Shared code becomes the saved draft only once it is edited                                                                                                                                          |
+| Output           | Rendered as React text nodes. User output is never inserted as HTML                                                                                                                                                                                                                                                                                                                 |
 
 The `sandbox` CSP directive keeps the page at an opaque origin even when it's
 opened directly. `'unsafe-eval'` is allowed **only inside the sandbox**: that
@@ -416,6 +417,24 @@ Optional build-time environment variables:
 | `SITE_URL`                 | Canonical origin for canonical links, Open Graph URLs and the sitemap. Defaults to `https://js-ts-playground-eight.vercel.app`. Set it on a fork or self-hosted copy with its own domain. |
 | `GOOGLE_SITE_VERIFICATION` | Token for Google Search Console's HTML-tag verification; adds `<meta name="google-site-verification">`.                                                                                   |
 | `NEXT_PUBLIC_SANDBOX_URL`  | Separate sandbox origin (see above).                                                                                                                                                      |
+
+### Self-hosting
+
+Code runs in each visitor's browser, so the server only sends files, but
+there are a lot of them: a first visit downloads about 4.7 MB for
+TypeScript, 9.5 MB for Python and 30 MB for C or C++ (later visits come from
+the browser cache). On Vercel a CDN serves them. `next start` on its own
+compresses every editor file again for each visitor: in a load test on a
+6-core laptop it kept up with about 13 new visitors per second, while at 17
+per second visitors waited around half a minute and memory reached 800 MB.
+
+For more than a handful of visitors at once, put a CDN or a caching reverse
+proxy (as [Next.js recommends](https://nextjs.org/docs/app/guides/self-hosting#reverse-proxy))
+in front of `next start`, and let it cache `/_next/static/` and `/vendor/`:
+both are served with `immutable` cache headers. If the proxy compresses
+responses itself, set `compress: false` in `next.config.ts` so that Next.js
+does not do the work twice. The language runtimes are stored compressed
+already and are served as they are.
 
 ## Search engines
 

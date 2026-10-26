@@ -113,6 +113,12 @@ function bundleTypeScriptLibs() {
   );
 }
 
+/**
+ * Version of the published layout. Raise it when the way files are written
+ * changes, so existing copies are regenerated rather than kept as up to date.
+ */
+const INDEX_FORMAT = 2;
+
 /** `{ [published name]: path in the package }` for a spec's files and directories. */
 function runtimeFiles(packageRoot, spec) {
   const files = { ...spec.files };
@@ -153,6 +159,7 @@ function copyRuntime(id, spec) {
     const index = JSON.parse(readFileSync(indexPath, "utf8"));
     const published = Object.keys(index.files);
     if (
+      index.format === INDEX_FORMAT &&
       published.length === names.length &&
       names.every((name) => name in index.files)
     ) {
@@ -168,17 +175,22 @@ function copyRuntime(id, spec) {
   for (const [name, source] of Object.entries(sources)) {
     const bytes = readFileSync(join(packageRoot, source));
     mkdirSync(dirname(join(outDir, name)), { recursive: true });
-    if (plain.has(name)) {
+    const gzipped = plain.has(name) ? null : gzipSync(bytes, { level: 9 });
+    // Data that is already compressed (webR's .gz files) barely shrinks:
+    // publish it as is, so browsers do not decompress it a second time.
+    if (!gzipped || gzipped.length > bytes.length * 0.95) {
       writeFileSync(join(outDir, name), bytes);
       files[name] = { size: bytes.length };
     } else {
-      const gzipped = gzipSync(bytes, { level: 9 });
       writeFileSync(join(outDir, `${name}.gz`), gzipped);
       files[name] = { size: bytes.length, gzip: gzipped.length };
     }
   }
   // Written last: its presence marks a complete copy.
-  writeFileSync(indexPath, JSON.stringify({ version, files }));
+  writeFileSync(
+    indexPath,
+    JSON.stringify({ format: INDEX_FORMAT, version, files }),
+  );
   const total = Object.values(files).reduce(
     (sum, file) => sum + (file.gzip ?? file.size),
     0,

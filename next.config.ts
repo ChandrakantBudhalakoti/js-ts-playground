@@ -21,6 +21,12 @@ const appContentSecurityPolicy = [
   // 'wasm-unsafe-eval' lets the C/C++ compiler worker compile Clang (a
   // WebAssembly module); it does not allow eval() of JavaScript.
   `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""}`,
+  // Next.js needs inline <script> elements while pages are prerendered (a
+  // nonce would make every page dynamic), but nothing uses inline event
+  // handlers. Blocking them disarms the usual payload of HTML that slips
+  // past a sanitizer, such as Monaco's markdown hovers of JSDoc comments
+  // from a share link (`<img src=x onerror=…>`).
+  "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
@@ -63,6 +69,19 @@ const nextConfig: NextConfig = {
             value:
               "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
           },
+          // A page that opens the app with window.open() gets no handle on
+          // it, so it cannot keep rewriting the URL hash (share links).
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          // Browsers ignore it over plain HTTP (local `next start`).
+          { key: "Strict-Transport-Security", value: "max-age=63072000" },
+        ],
+      },
+      {
+        // Monaco, the TypeScript libs and the language runtimes (~75 MB) are
+        // only for this app: other sites may not embed them.
+        source: "/vendor/:path*",
+        headers: [
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
         ],
       },
       {

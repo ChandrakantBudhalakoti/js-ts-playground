@@ -13,16 +13,39 @@ import {
 } from "@/lib/runtime/sandbox-document";
 
 type Message = Record<string, unknown>;
-type Listener = (event: { data?: unknown; source?: unknown }) => void;
+type Listener = (event: {
+  data?: unknown;
+  source?: unknown;
+  ports?: unknown[];
+}) => void;
 
 const USER_URL = "blob:null/user-module";
 
+/**
+ * A MessagePort made in a VM realm (so code there can patch its prototype)
+ * that hands what is posted to `sink`.
+ */
+function realmPort(context: vm.Context, sink: (message: Message) => void) {
+  const create = vm.runInContext(
+    `(sink) => {
+      class MessagePort { postMessage(message) { sink(message); } }
+      globalThis.MessagePort = MessagePort;
+      return new MessagePort();
+    }`,
+    context,
+  ) as (sink: (message: Message) => void) => unknown;
+  return create((message) => sink(structuredClone(message)));
+}
+
 /** Run the real worker script in a VM context with a fake worker global. */
 function startWorker() {
+  /** Reports sent through the private port. */
   const posted: Message[] = [];
+  /** Anything sent with the worker's own postMessage (never read by the relay). */
+  const unsafe: Message[] = [];
   const listeners: Record<string, Listener[]> = {};
   const scope: Record<string, unknown> = {
-    postMessage: (message: Message) => posted.push(structuredClone(message)),
+    postMessage: (message: Message) => unsafe.push(structuredClone(message)),
     addEventListener: (type: string, listener: Listener) =>
       (listeners[type] ??= []).push(listener),
     setTimeout,
@@ -37,13 +60,36 @@ function startWorker() {
   scope.self = scope;
   const context = vm.createContext(scope);
   vm.runInContext(buildWorkerSource(), context);
+  const port = realmPort(context, (message) => posted.push(message));
   return {
     posted,
+    unsafe,
     /** Execute code as if it were user code (errors come from the VM realm). */
     exec: (code: string) => vm.runInContext(code, context),
+    /** Deliver a message from the relay, with the private port. */
     dispatch: (data: unknown) =>
-      listeners.message?.forEach((listener) => listener({ data })),
+      listeners.message?.forEach((listener) =>
+        listener({ data, ports: [port] }),
+      ),
   };
+}
+
+/** One end of a FakeMessageChannel; delivers synchronously to the other. */
+class FakePort {
+  other: FakePort | null = null;
+  onmessage: Listener | null = null;
+  postMessage(data: unknown) {
+    this.other?.onmessage?.({ data });
+  }
+}
+
+class FakeMessageChannel {
+  port1 = new FakePort();
+  port2 = new FakePort();
+  constructor() {
+    this.port1.other = this.port2;
+    this.port2.other = this.port1;
+  }
 }
 
 /** Run the real relay script with a fake parent window and Worker class. */
@@ -58,15 +104,18 @@ function startRelay() {
   class FakeWorker {
     received: Message[] = [];
     terminated = false;
-    private listeners: Record<string, Listener[]> = {};
+    /** The private port the relay sent with the first message. */
+    port: FakePort | undefined;
+    listeners: Record<string, Listener[]> = {};
     constructor(
       readonly url: string,
       readonly options?: WorkerOptions,
     ) {
       workers.push(this);
     }
-    postMessage(message: Message) {
+    postMessage(message: Message, transfer: unknown[] = []) {
       this.received.push(message);
+      this.port ??= transfer.find((item) => item instanceof FakePort);
     }
     addEventListener(type: string, listener: Listener) {
       (this.listeners[type] ??= []).push(listener);
@@ -74,7 +123,12 @@ function startRelay() {
     terminate() {
       this.terminated = true;
     }
+    /** Report to the relay, as the worker's scripts do. */
     emit(data: Message) {
+      this.port?.postMessage(data);
+    }
+    /** Post with the worker's own postMessage, as user code could. */
+    emitUnsafe(data: Message) {
       this.listeners.message?.forEach((listener) => listener({ data }));
     }
   }
@@ -92,6 +146,7 @@ function startRelay() {
     URL: { createObjectURL: () => "blob:null/worker" },
     Blob,
     Worker: FakeWorker,
+    MessageChannel: FakeMessageChannel,
     setTimeout,
     clearTimeout,
   });
@@ -112,8 +167,9 @@ const RUN_ID = "a1b2c3d4e5f60718293a4b5c";
 describe("sandbox worker script", () => {
   it("caps console arguments so the app still accepts the message", () => {
     const worker = startWorker();
+    worker.dispatch({ type: "RUN", code: "" });
     worker.exec("console.log(...Array.from({ length: 60 }, (_, i) => i))");
-    const [log] = worker.posted;
+    const log = worker.posted.find((m) => m.type === "LOG")!;
     const args = log.args as { t: string; v: string }[];
     expect(args).toHaveLength(RUNTIME_LIMITS.maxArgs);
     expect(args.at(-1)).toEqual({ t: "string", v: "… 11 more arguments" });
@@ -124,10 +180,12 @@ describe("sandbox worker script", () => {
 
   it("does not add a marker at exactly the limit", () => {
     const worker = startWorker();
+    worker.dispatch({ type: "RUN", code: "" });
     worker.exec(
       `console.log(...Array.from({ length: ${RUNTIME_LIMITS.maxArgs} }, (_, i) => i))`,
     );
-    const args = worker.posted[0].args as { t: string; v: string }[];
+    const log = worker.posted.find((m) => m.type === "LOG")!;
+    const args = log.args as { t: string; v: string }[];
     expect(args).toHaveLength(RUNTIME_LIMITS.maxArgs);
     expect(args.at(-1)).toEqual({ t: "number", v: "49" });
   });
@@ -146,6 +204,32 @@ describe("sandbox worker script", () => {
     expect(top).toMatchObject({ t: "error", stack: expected });
     expect(JSON.stringify(nested)).toContain(JSON.stringify(expected));
     expect(JSON.stringify(log)).not.toContain("blob:");
+  });
+
+  it("reports only through the port that comes with RUN", () => {
+    const worker = startWorker();
+    worker.exec("console.log('before RUN')");
+    expect(worker.posted).toEqual([]);
+
+    worker.dispatch({ type: "RUN", code: "" });
+    worker.exec("console.log('hello')");
+    expect(worker.posted.find((m) => m.type === "LOG")).toMatchObject({
+      args: [{ t: "string", v: "hello" }],
+    });
+    expect(worker.unsafe).toEqual([]);
+  });
+
+  it("does not let user code capture the port by patching MessagePort", () => {
+    const worker = startWorker();
+    worker.dispatch({ type: "RUN", code: "" });
+    worker.exec(`
+      MessagePort.prototype.postMessage = function () { globalThis.stolen = this; };
+      console.log("after the patch");
+    `);
+    expect(worker.exec("globalThis.stolen")).toBeUndefined();
+    expect(worker.posted.find((m) => m.type === "LOG")).toMatchObject({
+      args: [{ t: "string", v: "after the patch" }],
+    });
   });
 });
 
@@ -260,6 +344,33 @@ describe("sandbox relay script", () => {
     const relay = startRelay();
     relay.send({ type: "RUN", runId: RUN_ID, code: "", channel: "other" });
     expect(relay.workers).toHaveLength(0);
+  });
+
+  it("ignores what the worker posts outside its private port", () => {
+    const relay = startRelay();
+    relay.send({ type: "RUN", runId: RUN_ID, code: "" });
+    const worker = relay.workers[0];
+    const before = relay.toHost.length;
+    // What user code could send with self.postMessage().
+    worker.emitUnsafe({ type: "DONE", elapsedMs: 0, exitCode: 0 });
+    worker.emitUnsafe({
+      type: "ERROR",
+      error: { name: "SandboxError", message: "forged" },
+      elapsedMs: 0,
+    });
+    expect(relay.toHost).toHaveLength(before);
+    expect(worker.listeners.message).toBeUndefined();
+  });
+
+  it("forwards DONE once, and BOOTED never for a JavaScript run", () => {
+    const relay = startRelay();
+    relay.send({ type: "RUN", runId: RUN_ID, code: "" });
+    const worker = relay.workers[0];
+    const before = relay.toHost.length;
+    worker.emit({ type: "BOOTED", elapsedMs: 0 });
+    worker.emit({ type: "DONE", elapsedMs: 1 });
+    worker.emit({ type: "DONE", elapsedMs: 2 });
+    expect(relay.toHost.slice(before).map((m) => m.type)).toEqual(["DONE"]);
   });
 });
 
@@ -402,6 +513,29 @@ describe("sandbox relay script: WebAssembly runtimes", () => {
       type: "LIMIT",
       reason: expect.stringContaining("Output limit"),
     });
+  });
+
+  it("counts printed text toward the message limit", () => {
+    const { relay, worker } = booted();
+    relay.send({ type: "RUN", runId: RUN_ID, code: "" });
+    // Each switch between stdout and stderr ends a console entry.
+    for (let i = 0; i <= RUNTIME_LIMITS.maxMessages; i++) {
+      worker.emit(out(1, "a"));
+      worker.emit(out(2, "b"));
+    }
+    expect(worker.terminated).toBe(true);
+    expect(relay.toHost.at(-1)).toMatchObject({
+      type: "LIMIT",
+      reason: expect.stringContaining(`${RUNTIME_LIMITS.maxMessages} messages`),
+    });
+    const logs = relay.toHost.filter((m) => m.type === "LOG");
+    expect(logs).toHaveLength(RUNTIME_LIMITS.maxMessages);
+  });
+
+  it("forwards BOOTED once", () => {
+    const { relay, worker } = booted();
+    worker.emit({ type: "BOOTED", elapsedMs: 13 });
+    expect(relay.toHost.filter((m) => m.type === "BOOTED")).toHaveLength(1);
   });
 
   it("reports a runtime that fails to boot", () => {

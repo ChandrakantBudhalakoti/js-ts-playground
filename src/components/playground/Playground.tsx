@@ -152,7 +152,6 @@ function plural(count: number, word: string) {
 
 export function Playground() {
   const [settings, updateSettings] = useEditorSettings();
-  const compilerState = useCompilerState();
   const { resolvedTheme } = useTheme();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const execution = useCodeExecution(SANDBOX_URL);
@@ -165,9 +164,11 @@ export function Playground() {
   } = useDiagnostics();
 
   const [language, setLanguage] = useState<Language>("typescript");
-  const tooling = useToolingStatus(language, compilerState);
   const [stdin, setStdin] = useState("");
   const [loaded, setLoaded] = useState(false);
+  // Only once the document is known: the initial language is a placeholder.
+  const compilerState = useCompilerState(loaded && isJavaScriptLike(language));
+  const tooling = useToolingStatus(language, compilerState);
   // "code" shows the editor on phones; on desktop the bottom panel treats it as "console".
   const [view, setView] = useState<PanelView>("code");
   const [preparing, setPreparing] = useState(false);
@@ -240,7 +241,11 @@ export function Playground() {
     };
   }, [saveDraft]);
 
-  /** Replace the document (examples, reset, shared links). Undoable in the editor. */
+  /**
+   * Replace the document (examples, reset, shared links). Undoable in the
+   * editor. Shared code becomes the saved draft only once it is edited, like
+   * on first load: a link alone never replaces the draft.
+   */
   const loadDocument = useCallback(
     (doc: CodeDocument, options: { shared?: boolean } = {}) => {
       sharedCodeRef.current = options.shared ? doc.code : null;
@@ -254,7 +259,7 @@ export function Playground() {
       clearDiagnostics();
       scheduleCheck(doc.code, doc.language, 0);
       prepareLanguage(doc.language);
-      saveDraft();
+      if (!options.shared) saveDraft();
     },
     [clearDiagnostics, prepareLanguage, scheduleCheck, saveDraft],
   );
@@ -369,7 +374,8 @@ export function Playground() {
         clearUrlDocument();
       }
       scheduleCheck(value, languageRef.current);
-      scheduleSave();
+      // Unedited shared code (loading it fires a change too) is not saved.
+      if (sharedCodeRef.current === null) scheduleSave();
     },
     [scheduleCheck, scheduleSave],
   );
@@ -504,9 +510,12 @@ export function Playground() {
     }
 
     let result: CompileResult;
+    const compiler = getCompilerClient();
+    // After a failed download, pressing Run tries again.
+    compiler.reset();
     setPreparing(true);
     try {
-      result = await getCompilerClient().compile(code, lang);
+      result = await compiler.compile(code, lang);
     } catch (error) {
       if (token !== runToken.current) return;
       setPreparing(false);

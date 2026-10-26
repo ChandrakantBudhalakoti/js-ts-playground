@@ -16,18 +16,36 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
   : never;
 
 /**
+ * How long one check or compile may run once the worker has started it (the
+ * toolchain download does not count). The preprocessor and templates can be
+ * made to run almost forever, and share links are checked as they open.
+ */
+export const CLANG_TIMEOUT_MS = 60_000;
+
+type Request = DistributiveOmit<ClangRequest, "id">;
+
+type Pending = {
+  message: Request;
+  resolve: (result: ClangResult) => void;
+  reject: (error: Error) => void;
+  /** The time limit, set once the worker has started the request. */
+  timer?: ReturnType<typeof setTimeout>;
+};
+
+/**
  * Main-thread client for the Clang worker. The toolchain (~27 MB) is only
- * downloaded once C or C++ is used, and compiles off the main thread.
+ * downloaded once C or C++ is used, and compiles off the main thread. A
+ * request that runs past the time limit fails, and the stuck worker is
+ * replaced by a new one.
  */
 export class ClangClient {
   private worker: Worker | null = null;
   private nextId = 1;
-  private pending = new Map<
-    number,
-    { resolve: (result: ClangResult) => void; reject: (error: Error) => void }
-  >();
+  private pending = new Map<number, Pending>();
   private listeners = new Set<() => void>();
   private _state: ClangState = { status: "idle" };
+
+  constructor(private readonly timeoutMs = CLANG_TIMEOUT_MS) {}
 
   get state(): ClangState {
     return this._state;
@@ -97,15 +115,19 @@ export class ClangClient {
   }
 
   dispose() {
-    this.worker?.terminate();
-    this.worker = null;
+    this.stopWorker();
     this.rejectAll(new Error("The compiler was stopped."));
     this.listeners.clear();
   }
 
-  private request(
-    message: DistributiveOmit<ClangRequest, "id">,
-  ): Promise<ClangResult> {
+  private stopWorker() {
+    this.worker?.removeEventListener("message", this.onMessage);
+    this.worker?.removeEventListener("error", this.onError);
+    this.worker?.terminate();
+    this.worker = null;
+  }
+
+  private request(message: Request): Promise<ClangResult> {
     if (this._state.status === "error")
       return Promise.reject(new Error(this._state.message));
     this.start();
@@ -114,7 +136,7 @@ export class ClangClient {
       return Promise.reject(new Error("The compiler is unavailable."));
     const id = this.nextId++;
     return new Promise<ClangResult>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, { message, resolve, reject });
       worker.postMessage({ ...message, id } as ClangRequest);
     });
   }
@@ -140,6 +162,12 @@ export class ClangClient {
     }
     const pending = this.pending.get(response.id);
     if (!pending) return;
+    if (response.type === "started") {
+      const { id } = response;
+      pending.timer = setTimeout(() => this.timeout(id), this.timeoutMs);
+      return;
+    }
+    clearTimeout(pending.timer);
     this.pending.delete(response.id);
     if (response.type === "result") pending.resolve(response.result);
     else pending.reject(new Error(response.message));
@@ -150,10 +178,34 @@ export class ClangClient {
   };
 
   private fail(message: string) {
-    this.worker?.terminate();
-    this.worker = null;
+    this.stopWorker();
     this.setState({ status: "error", message });
     this.rejectAll(new Error(message));
+  }
+
+  /**
+   * Request `id` ran past the time limit, so the worker is stuck in it: fail
+   * it, replace the worker and resend the requests queued behind it.
+   */
+  private timeout(id: number) {
+    const stuck = this.pending.get(id);
+    if (!stuck) return;
+    this.pending.delete(id);
+    this.stopWorker();
+    stuck.reject(
+      new Error(
+        `The compiler took longer than ${Math.round(this.timeoutMs / 1000)} seconds and was stopped.`,
+      ),
+    );
+    this.start();
+    const worker = this.worker;
+    if (!worker) {
+      this.rejectAll(new Error("The compiler is unavailable."));
+      return;
+    }
+    for (const [queuedId, queued] of this.pending) {
+      worker.postMessage({ ...queued.message, id: queuedId } as ClangRequest);
+    }
   }
 
   /** Forget a failure, so the next request starts the compiler again. */
@@ -162,7 +214,10 @@ export class ClangClient {
   }
 
   private rejectAll(error: Error) {
-    for (const pending of this.pending.values()) pending.reject(error);
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer);
+      pending.reject(error);
+    }
     this.pending.clear();
   }
 

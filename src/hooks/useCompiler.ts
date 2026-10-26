@@ -20,11 +20,14 @@ const subscribe = (onChange: () => void) =>
 const getSnapshot = () => getCompilerClient().state;
 const getServerSnapshot = () => LOADING;
 
-/** Compiler worker status. Starts the worker after mount. */
-export function useCompilerState(): CompilerState {
+/**
+ * Compiler worker status. Starts the worker once `needed`: it downloads
+ * TypeScript (about 1 MB), which only JavaScript and TypeScript use.
+ */
+export function useCompilerState(needed: boolean): CompilerState {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   useEffect(() => {
-    getCompilerClient().start();
-  }, []);
+    if (needed) getCompilerClient().start();
+  }, [needed]);
   return state;
 }

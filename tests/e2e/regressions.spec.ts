@@ -229,4 +229,113 @@ test.describe("regressions", () => {
     await selectLanguage(page, "JavaScript");
     await expect(link).toHaveText(/^main\.ts:2:/);
   });
+
+  test("TypeScript recovers on Run after its download failed", async ({
+    page,
+  }) => {
+    // As when an overloaded server refuses the connection.
+    const libs = "**/vendor/typescript/**";
+    await page.route(libs, (route) => route.abort("connectionrefused"));
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem(
+          "jsts-playground:draft",
+          JSON.stringify({
+            language: "typescript",
+            code: "console.log('back online');",
+          }),
+        );
+      } catch {
+        // the sandbox iframe has no storage
+      }
+    });
+    await page.goto("/playground");
+    const compiler = page.getByTestId("compiler-status");
+    await expect(compiler).toHaveAttribute("data-status", "error", {
+      timeout: 45_000,
+    });
+
+    await page.unroute(libs);
+    await run(page);
+    await expectStatus(page, "completed", 45_000);
+    await expect(consoleOutput(page)).toContainText("back online");
+    await expect(compiler).toHaveAttribute("data-status", "ready");
+  });
+
+  test("an opened share link replaces the saved draft only once it is edited", async ({
+    page,
+  }) => {
+    await openPlayground(page, { code: "console.log('my work');" });
+    const hash = await encodeShareHash({
+      language: "javascript",
+      code: "console.log('from a link');",
+    });
+    await page.evaluate((value) => (window.location.hash = value), hash);
+    await answerDialog(page, "Replace", "Open the shared code?");
+    await expect(editorLines(page)).toContainText("from a link");
+
+    const savedCode = () =>
+      page.evaluate(
+        () =>
+          JSON.parse(
+            window.localStorage.getItem("jsts-playground:draft") ?? "{}",
+          ).code as string,
+      );
+    await page.waitForTimeout(1_000); // past the 400 ms autosave delay
+    expect(await savedCode()).toBe("console.log('my work');");
+
+    await focusEditorEnd(page);
+    await page.keyboard.type(" // mine now");
+    await expect.poll(savedCode).toContain("// mine now");
+  });
+});
+
+test.describe("download failures", () => {
+  test("a page whose scripts fail to download says so and offers Reload", async ({
+    page,
+  }) => {
+    // As when an overloaded server refuses connections: React never starts.
+    const chunks = "**/_next/static/chunks/**";
+    await page.route(chunks, (route) => route.abort("connectionrefused"));
+    await page.goto("/playground");
+    const notice = page.getByTestId("load-failure");
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText("didn't download");
+
+    await page.unroute(chunks);
+    await notice.getByRole("button", { name: "Reload" }).click();
+    await expect(page.locator(".monaco-editor").first()).toBeVisible({
+      timeout: 45_000,
+    });
+    await expect(notice).toHaveCount(0);
+  });
+});
+
+test.describe("app Content Security Policy", () => {
+  test("blocks inline event handlers injected into the page", async ({
+    page,
+  }) => {
+    await openPlayground(page);
+    const outcome = await page.evaluate(async () => {
+      const violation = new Promise<string>((resolve) => {
+        document.addEventListener(
+          "securitypolicyviolation",
+          (event) => resolve(event.effectiveDirective),
+          { once: true },
+        );
+        setTimeout(() => resolve("none"), 5_000);
+      });
+      // What a sanitizer bypass in rendered markdown would look like.
+      const host = document.createElement("div");
+      host.innerHTML = '<img src="data:," onerror="window.__injected = true">';
+      document.body.append(host);
+      const directive = await violation;
+      host.remove();
+      return {
+        directive,
+        injected: (window as { __injected?: boolean }).__injected === true,
+      };
+    });
+    expect(outcome).toEqual({ directive: "script-src-attr", injected: false });
+  });
 });

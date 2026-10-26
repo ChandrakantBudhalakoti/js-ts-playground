@@ -31,7 +31,12 @@ export function runtimeWorkerMain(
   drivers: Record<string, DriverFactory>,
 ) {
   const scope = self as any;
-  const post: (message: unknown) => void = scope.postMessage.bind(scope);
+  /**
+   * Reports go to the relay through the private port that comes with BOOT.
+   * The worker's own postMessage is within reach of the user's code (through
+   * each language's JavaScript interface), so the relay ignores it.
+   */
+  let post: (message: unknown) => void = () => {};
   const now = performance.now.bind(performance);
   const nativeConsole = scope.console;
   const encoder = new TextEncoder();
@@ -403,7 +408,11 @@ export function runtimeWorkerMain(
     const data = event.data;
     if (!data || typeof data !== "object") return;
     if (data.type === "BOOT" && phase === "idle") {
-      if (typeof data.runtime !== "string" || !data.assets) return;
+      const port = event.ports?.[0];
+      if (typeof data.runtime !== "string" || !data.assets || !port) return;
+      // Bound before any user code runs, so replacing
+      // MessagePort.prototype.postMessage later cannot capture the port.
+      post = port.postMessage.bind(port);
       void boot(data.runtime, data.assets);
     } else if (data.type === "RUN" && phase === "ready") {
       if (typeof data.code !== "string") return;

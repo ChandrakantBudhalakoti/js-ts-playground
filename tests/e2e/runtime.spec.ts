@@ -181,6 +181,7 @@ test.describe("JavaScript runtime", () => {
     await openPlayground(page, {
       code: [
         "try { await fetch('/'); console.log('fetch allowed'); } catch (e) { console.log('fetch blocked', e.name); }",
+        "try { await import('https://example.com/module.js'); console.log('import allowed'); } catch (e) { console.log('import blocked', e.name); }",
         "console.log('origin', self.origin);",
         "console.log('document', typeof document);",
       ].join("\n"),
@@ -189,7 +190,25 @@ test.describe("JavaScript runtime", () => {
     await expectStatus(page, "completed");
     const output = consoleOutput(page);
     await expect(output).toContainText("fetch blocked TypeError");
+    await expect(output).toContainText("import blocked TypeError");
     await expect(output).toContainText("origin null");
     await expect(output).toContainText("document undefined");
+  });
+
+  test("code cannot forge the worker's reports with postMessage", async ({
+    page,
+  }) => {
+    await openPlayground(page, {
+      code: [
+        "self.postMessage({ type: 'ERROR', error: { name: 'SandboxError', message: 'forged error' }, elapsedMs: 0 });",
+        "self.postMessage({ type: 'DONE', elapsedMs: 0, exitCode: 42 });",
+        "console.log('real output');",
+      ].join("\n"),
+    });
+    await run(page);
+    await expectStatus(page, "completed");
+    const output = consoleOutput(page);
+    await expect(output).toContainText("real output");
+    await expect(output).not.toContainText("forged error");
   });
 });

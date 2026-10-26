@@ -1,12 +1,28 @@
 // Audits the production dependencies like
-// `npm audit --omit=dev --audit-level=high`: any high or critical advisory
-// fails, except the reviewed ones in ACCEPTED (used by CI).
+// `npm audit --omit=dev --audit-level=high`, plus the dev dependencies whose
+// files are served to users: any high or critical advisory fails, except the
+// reviewed ones in ACCEPTED (used by CI).
 //
 //   node scripts/audit.mjs
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 const FAILING = new Set(["high", "critical"]);
+
+/**
+ * Dev dependencies that reach users anyway: the language runtimes and Clang
+ * (copied to public/vendor by prepare-assets.mjs) and TypeScript (bundled
+ * into the compiler worker). `--omit=dev` alone never reports them. Only
+ * advisories against these packages themselves count: their own
+ * dependencies are not shipped.
+ */
+const runtimeSpecs = JSON.parse(
+  readFileSync("src/lib/runtime/runtime-assets.json", "utf8"),
+);
+const SHIPPED_DEV_PACKAGES = new Set([
+  "typescript",
+  ...Object.values(runtimeSpecs).map((spec) => spec.package),
+]);
 
 /**
  * Advisories that were reviewed and don't affect this app. Each entry only
@@ -38,31 +54,40 @@ for (const entry of ACCEPTED) {
   if (applies) for (const id of entry.ids) accepted.set(id, entry);
 }
 
-// npm audit exits non-zero whenever it finds anything; read its report.
-const result = spawnSync("npm audit --omit=dev --json", {
-  shell: true,
-  encoding: "utf8",
-  maxBuffer: 64 * 1024 * 1024,
-});
-let report;
-try {
-  report = JSON.parse(result.stdout);
-} catch {
-  console.error(result.stderr || result.stdout || "npm audit failed");
-  process.exit(1);
-}
-if (report.error) {
-  console.error(`npm audit failed: ${report.error.summary ?? report.error}`);
-  process.exit(1);
+/** The advisories `npm audit` reports with `options`, by URL. */
+function audit(options) {
+  // npm audit exits non-zero whenever it finds anything; read its report.
+  const result = spawnSync(`npm audit ${options} --json`, {
+    shell: true,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  let report;
+  try {
+    report = JSON.parse(result.stdout);
+  } catch {
+    console.error(result.stderr || result.stdout || "npm audit failed");
+    process.exit(1);
+  }
+  if (report.error) {
+    console.error(`npm audit failed: ${report.error.summary ?? report.error}`);
+    process.exit(1);
+  }
+
+  // Dependents list the vulnerable package by name; the advisories
+  // themselves are the objects in `via`.
+  const found = new Map();
+  for (const vulnerability of Object.values(report.vulnerabilities ?? {})) {
+    for (const via of vulnerability.via) {
+      if (typeof via === "object") found.set(via.url, via);
+    }
+  }
+  return found;
 }
 
-// Dependents list the vulnerable package by name; the advisories themselves
-// are the objects in `via`.
-const advisories = new Map();
-for (const vulnerability of Object.values(report.vulnerabilities ?? {})) {
-  for (const via of vulnerability.via) {
-    if (typeof via === "object") advisories.set(via.url, via);
-  }
+const advisories = audit("--omit=dev");
+for (const [url, advisory] of audit("")) {
+  if (SHIPPED_DEV_PACKAGES.has(advisory.name)) advisories.set(url, advisory);
 }
 
 const failures = [];
@@ -90,11 +115,12 @@ if (stale.length) {
 
 if (failures.length) {
   console.error(
-    `\n${failures.length} high or critical advisories in production dependencies:`,
+    `\n${failures.length} high or critical advisories in shipped dependencies:`,
   );
   for (const line of failures) console.error(`  ${line}`);
   process.exit(1);
 }
 console.log(
-  "No unaccepted high or critical advisories in production dependencies.",
+  "No unaccepted high or critical advisories in production dependencies " +
+    `or the shipped dev dependencies (${[...SHIPPED_DEV_PACKAGES].join(", ")}).`,
 );

@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Weekly, so an advisory published since the last push still fails a run
+  # (scripts/audit.mjs). Only the audit job runs on the schedule.
+  schedule:
+    - cron: "23 5 * * 1"
 
 permissions:
   contents: read
@@ -19,12 +23,13 @@ env:
 jobs:
   quality:
     name: Lint · Types · Format · Unit tests · Build
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -62,25 +67,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
 
-      # Production dependencies only: anything high or critical fails the build,
-      # except advisories reviewed in scripts/audit.mjs (pinned to versions).
-      - name: npm audit (production dependencies)
+      # Production dependencies and the dev dependencies served to users (the
+      # language runtimes, Clang, TypeScript): anything high or critical fails
+      # the build, except advisories reviewed in scripts/audit.mjs (pinned to
+      # versions).
+      - name: npm audit (shipped dependencies)
         run: node scripts/audit.mjs
 
   e2e:
     name: Browser tests (Chromium · Firefox · mobile)
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -98,7 +106,7 @@ jobs:
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report
           path: |

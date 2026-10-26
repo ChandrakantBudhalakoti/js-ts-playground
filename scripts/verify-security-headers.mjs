@@ -64,6 +64,11 @@ check(
   sandbox.headers.get("x-content-type-options") === "nosniff",
   "/sandbox is missing X-Content-Type-Options: nosniff",
 );
+// fetch() accepts gzip and br, like browsers.
+check(
+  ["br", "gzip"].includes(sandbox.headers.get("content-encoding") ?? ""),
+  "/sandbox should be compressed for clients that accept it",
+);
 
 const script = /<script>([\s\S]*)<\/script>/.exec(sandboxHtml)?.[1];
 check(Boolean(script), "/sandbox has no inline bootstrap script");
@@ -99,10 +104,22 @@ check(
   !appCsp.get("script-src")?.includes("'unsafe-eval'"),
   "/ CSP must not allow 'unsafe-eval' in production",
 );
+check(
+  appCsp.get("script-src-attr")?.join(" ") === "'none'",
+  "/ CSP must block inline event handlers (script-src-attr 'none')",
+);
 check(appCsp.has("frame-src"), "/ CSP must restrict frame-src");
 check(
   app.headers.get("x-frame-options") === "DENY",
   "/ is missing X-Frame-Options: DENY",
+);
+check(
+  app.headers.get("cross-origin-opener-policy") === "same-origin",
+  "/ is missing Cross-Origin-Opener-Policy: same-origin",
+);
+check(
+  /max-age=\d{8,}/.test(app.headers.get("strict-transport-security") ?? ""),
+  "/ is missing a long-lived Strict-Transport-Security header",
 );
 
 // --- Self-hosted assets --------------------------------------------------------
@@ -153,6 +170,10 @@ for (const { path, cache, expectation } of assets) {
   check(
     cache.test(asset.headers.get("cache-control") ?? ""),
     `${path} should be served with ${expectation}`,
+  );
+  check(
+    asset.headers.get("cross-origin-resource-policy") === "same-origin",
+    `${path} should be served with Cross-Origin-Resource-Policy: same-origin`,
   );
 }
 

@@ -21,7 +21,9 @@ test.describe.configure({ timeout: 180_000 });
 /** A line each example prints, proving the program ran to its end. */
 const EXPECTED_OUTPUT: Record<string, string> = {
   "py-hello": "Hello, Ada! You know 2 languages.",
-  "py-input": "Nice to meet you, Ada!",
+  // The last line, so it is in the last console entry however printed text
+  // is batched (it also shows that both input lines were read).
+  "py-input": "Sum: 12 Average: 4.0",
   "c-hello": "First 10 primes: 2 3 5 7 11 13 17 19 23 29",
   "c-input": "Read 5 numbers: sum 24, max 9, average 4.80",
   "c-pointers": "Reversed: 1 4 9 16 25",
@@ -176,13 +178,19 @@ test.describe("errors in other languages", () => {
     await expect(loggedLines(page)).toContainText(["before the loop"]);
   });
 
-  test("the sandbox has no network access", async ({ page }) => {
+  test("the sandbox has no network access, even past the worker's fetch replacement", async ({
+    page,
+  }) => {
+    // The worker's fetch replacement is only a convenience: code can delete
+    // it and reach the browser's own fetch. The sandbox CSP must block that.
     await openPlayground(page, {
       language: "python",
       code: [
-        "from js import fetch",
+        "import js",
+        'js.eval("delete self.fetch")',
+        'print("native fetch:", "[native code]" in js.eval("String(self.fetch)"))',
         "try:",
-        '    await fetch("https://example.com/")',
+        '    await js.fetch("https://example.com/")',
         '    print("network reachable")',
         "except Exception as error:",
         '    print("blocked:", type(error).__name__)',
@@ -190,6 +198,10 @@ test.describe("errors in other languages", () => {
     });
     await run(page);
     await expectStatus(page, "completed", STATUS_TIMEOUT);
-    await expect(loggedLines(page)).toContainText(["blocked:"]);
+    // Printed lines may be batched into one console entry.
+    const output = consoleOutput(page);
+    await expect(output).toContainText("native fetch: True");
+    await expect(output).toContainText("blocked:");
+    await expect(output).not.toContainText("network reachable");
   });
 });

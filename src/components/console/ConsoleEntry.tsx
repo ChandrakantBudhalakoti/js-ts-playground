@@ -7,6 +7,7 @@ import {
   formatTopLevel,
   runtimeErrorTitle,
 } from "@/lib/console/format";
+import { SITE_NAME } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import type {
   ConsoleEntry as ConsoleEntryData,
@@ -122,7 +123,11 @@ export const ConsoleEntry = memo(function ConsoleEntry({
       >
         {Icon && <Icon className="size-3.5" />}
       </span>
-      <span className="sr-only">{entry.level}: </span>
+      {/* Program output can imitate a note's words, never this prefix (or
+          the note's font and icon). */}
+      <span className="sr-only">
+        {isSystem ? `${SITE_NAME} ${entry.level}: ` : `${entry.level}: `}
+      </span>
       {entry.kind === "runtime-error" ? (
         <div className={cn("flex min-w-0 flex-1", style.text)}>
           <RuntimeError entry={entry} onNavigate={onNavigate} />

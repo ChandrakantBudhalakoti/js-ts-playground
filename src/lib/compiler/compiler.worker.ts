@@ -65,6 +65,7 @@ self.addEventListener(
       return;
     try {
       const service = await servicePromise;
+      post({ id: request.id, type: "started" });
       if (request.type === "check") {
         post({
           id: request.id,

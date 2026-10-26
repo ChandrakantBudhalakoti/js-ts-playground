@@ -7,9 +7,21 @@ export type CompilerState =
   | { status: "ready"; version: string }
   | { status: "error"; message: string };
 
+/**
+ * How long one check or compile may run once the worker has started it.
+ * Types can be written to keep the checker busy almost forever, and code
+ * from a share link is checked as soon as it opens.
+ */
+export const COMPILER_TIMEOUT_MS = 20_000;
+
+type Request = DistributiveOmit<CompilerRequest, "id">;
+
 type Pending = {
+  message: Request;
   resolve: (value: CompilerResponse) => void;
   reject: (error: Error) => void;
+  /** The time limit, set once the worker has started the request. */
+  timer?: ReturnType<typeof setTimeout>;
 };
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
@@ -18,7 +30,8 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 
 /**
  * Main-thread client for the compiler worker. TypeScript runs off the main
- * thread so type checking never blocks typing.
+ * thread so type checking never blocks typing. A request that runs past the
+ * time limit fails, and the stuck worker is replaced by a new one.
  */
 export class CompilerClient {
   private worker: Worker | null = null;
@@ -26,6 +39,8 @@ export class CompilerClient {
   private pending = new Map<number, Pending>();
   private listeners = new Set<(state: CompilerState) => void>();
   private _state: CompilerState = { status: "loading" };
+
+  constructor(private readonly timeoutMs = COMPILER_TIMEOUT_MS) {}
 
   get state(): CompilerState {
     return this._state;
@@ -71,17 +86,29 @@ export class CompilerClient {
   }
 
   dispose() {
-    this.worker?.removeEventListener("message", this.onMessage);
-    this.worker?.removeEventListener("error", this.onError);
-    this.worker?.terminate();
-    this.worker = null;
+    this.stopWorker();
     this.rejectAll(new Error("Compiler disposed."));
     this.listeners.clear();
   }
 
-  private request(
-    message: DistributiveOmit<CompilerRequest, "id">,
-  ): Promise<CompilerResponse> {
+  /**
+   * Forget a failure (such as a download that failed while the server was
+   * overloaded), so the next request starts a new compiler worker.
+   */
+  reset() {
+    if (this._state.status !== "error") return;
+    this.stopWorker();
+    this.setState({ status: "loading" });
+  }
+
+  private stopWorker() {
+    this.worker?.removeEventListener("message", this.onMessage);
+    this.worker?.removeEventListener("error", this.onError);
+    this.worker?.terminate();
+    this.worker = null;
+  }
+
+  private request(message: Request): Promise<CompilerResponse> {
     if (this._state.status === "error") {
       return Promise.reject(new Error(this._state.message));
     }
@@ -90,7 +117,7 @@ export class CompilerClient {
     if (!worker) return Promise.reject(new Error("Compiler is unavailable."));
     const id = this.nextId++;
     return new Promise<CompilerResponse>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, { message, resolve, reject });
       worker.postMessage({ ...message, id } as CompilerRequest);
     }).then((response) => {
       if (response.type === "error") throw new Error(response.message);
@@ -115,6 +142,12 @@ export class CompilerClient {
     }
     const pending = this.pending.get(response.id);
     if (!pending) return;
+    if (response.type === "started") {
+      const { id } = response;
+      pending.timer = setTimeout(() => this.timeout(id), this.timeoutMs);
+      return;
+    }
+    clearTimeout(pending.timer);
     this.pending.delete(response.id);
     pending.resolve(response);
   };
@@ -125,8 +158,39 @@ export class CompilerClient {
     this.rejectAll(new Error(message));
   };
 
+  /**
+   * Request `id` ran past the time limit, so the worker is stuck in it: fail
+   * it, replace the worker and resend the requests queued behind it.
+   */
+  private timeout(id: number) {
+    const stuck = this.pending.get(id);
+    if (!stuck) return;
+    this.pending.delete(id);
+    this.stopWorker();
+    stuck.reject(
+      new Error(
+        `The compiler took longer than ${Math.round(this.timeoutMs / 1000)} seconds and was stopped.`,
+      ),
+    );
+    this.start();
+    const worker = this.worker;
+    if (!worker) {
+      this.rejectAll(new Error("Compiler is unavailable."));
+      return;
+    }
+    for (const [queuedId, queued] of this.pending) {
+      worker.postMessage({
+        ...queued.message,
+        id: queuedId,
+      } as CompilerRequest);
+    }
+  }
+
   private rejectAll(error: Error) {
-    for (const pending of this.pending.values()) pending.reject(error);
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer);
+      pending.reject(error);
+    }
     this.pending.clear();
   }
 

@@ -67,7 +67,12 @@ function sandboxWorkerMain(
   config: WorkerConfig,
 ) {
   const scope = self as any;
-  const post: (message: unknown) => void = scope.postMessage.bind(scope);
+  /**
+   * Reports go to the relay through the private port that comes with RUN.
+   * The worker's own postMessage is within reach of the user's code, so the
+   * relay ignores it: code cannot forge completion, errors or exit codes.
+   */
+  let post: (message: unknown) => void = () => {};
   const nativeSetTimeout: (handler: () => void, ms?: number) => number =
     scope.setTimeout.bind(scope);
   const nativeClearTimeout: (id: number) => void =
@@ -332,8 +337,10 @@ function sandboxWorkerMain(
   // --- run -------------------------------------------------------------------
   scope.addEventListener("message", (event: any) => {
     const data = event.data;
+    const port = event.ports?.[0];
     if (
       started ||
+      !port ||
       !data ||
       typeof data !== "object" ||
       data.type !== "RUN" ||
@@ -342,6 +349,9 @@ function sandboxWorkerMain(
       return;
     }
     started = true;
+    // Bound before the user's code runs, so replacing
+    // MessagePort.prototype.postMessage later cannot capture the port.
+    post = port.postMessage.bind(port);
     userUrl = URL.createObjectURL(
       new Blob([data.code], { type: "text/javascript" }),
     );
@@ -389,6 +399,8 @@ function sandboxRelayMain(
     worker: Worker;
     messages: number;
     stopped: boolean;
+    /** DONE was forwarded (it is forwarded once). */
+    done: boolean;
     /** Set for runtime workers (BOOT); false until the code was sent. */
     booted?: boolean;
     started?: boolean;
@@ -417,6 +429,21 @@ function sandboxRelayMain(
     if (reason) send({ type: "LIMIT", runId: run.id, reason });
   }
 
+  /**
+   * Count one console entry about to be sent, printed text included (output
+   * that switches between stdout and stderr makes one entry per switch).
+   * Past the limit the run is stopped and this returns false.
+   */
+  function countEntry(): boolean {
+    if (!run || run.stopped) return false;
+    run.messages += 1;
+    if (run.messages <= config.maxMessages) return true;
+    stop(
+      `Output limit reached (${config.maxMessages} messages). The run was stopped.`,
+    );
+    return false;
+  }
+
   /** Send buffered text output as console entries of bounded size. */
   function flushOutput() {
     if (!run) return;
@@ -436,6 +463,7 @@ function sandboxRelayMain(
       text = text.slice(cut);
       // One trailing newline ends the entry; the rest is shown as is.
       const value = chunk.endsWith("\n") ? chunk.slice(0, -1) : chunk;
+      if (!countEntry()) return;
       send({
         type: "LOG",
         runId: run.id,
@@ -478,14 +506,9 @@ function sandboxRelayMain(
     }
     // Everything else keeps its place after the output written before it.
     flushOutput();
+    if (run.stopped) return;
     if (message.type === "LOG" || message.type === "ERROR") {
-      run.messages += 1;
-      if (run.messages > config.maxMessages) {
-        stop(
-          `Output limit reached (${config.maxMessages} messages). The run was stopped.`,
-        );
-        return;
-      }
+      if (!countEntry()) return;
       const payload: Record<string, unknown> =
         message.type === "LOG"
           ? {
@@ -524,6 +547,8 @@ function sandboxRelayMain(
       }
       send(payload);
     } else if (message.type === "DONE") {
+      if (run.done) return;
+      run.done = true;
       send({
         type: "DONE",
         runId: run.id,
@@ -532,6 +557,8 @@ function sandboxRelayMain(
         inputMissing: message.inputMissing,
       });
     } else if (message.type === "BOOTED") {
+      // Once, and only from a runtime worker that is booting.
+      if (run.booted !== false) return;
       run.booted = true;
       send({ type: "BOOTED", runId: run.id, elapsedMs: message.elapsedMs });
     } else if (message.type === "BOOT_ERROR") {
@@ -559,11 +586,16 @@ function sandboxRelayMain(
     send({ type: "DONE", runId, elapsedMs: 0 });
   }
 
+  /**
+   * Start a worker for `runId`. Its reports arrive only through a private
+   * channel, whose `port` must go with the worker's first message: the
+   * worker's own postMessage is also within reach of the user's code.
+   */
   function startWorker(
     runId: string,
     url: string,
     options: WorkerOptions,
-  ): NonNullable<typeof run> | null {
+  ): { current: NonNullable<typeof run>; port: MessagePort } | null {
     let worker: Worker;
     try {
       worker = new Worker(url, options);
@@ -576,12 +608,14 @@ function sandboxRelayMain(
       worker,
       messages: 0,
       stopped: false,
+      done: false,
       outputChars: 0,
       pending: null,
       flushTimer: undefined,
     };
     run = current;
-    worker.addEventListener("message", (event) => forward(event.data));
+    const channel = new MessageChannel();
+    channel.port1.onmessage = (event) => forward(event.data);
     worker.addEventListener("error", (event) => {
       // User errors are handled inside the worker; this only fires when the
       // worker itself could not start or crashed.
@@ -600,7 +634,7 @@ function sandboxRelayMain(
       stop();
       send({ type: "DONE", runId, elapsedMs: 0 });
     });
-    return current;
+    return { current, port: channel.port2 };
   }
 
   window.addEventListener("message", (event) => {
@@ -621,18 +655,22 @@ function sandboxRelayMain(
       runtimeWorkerUrl ||= URL.createObjectURL(
         new Blob([runtimeWorkerSource], { type: "text/javascript" }),
       );
-      const current = startWorker(data.runId, runtimeWorkerUrl, {
+      const created = startWorker(data.runId, runtimeWorkerUrl, {
         name: `playground-${data.runtime}`,
       });
-      if (!current) return;
+      if (!created) return;
+      const { current, port } = created;
       current.booted = false;
       current.started = false;
       const assets = data.assets as Record<string, unknown>;
       current.worker.postMessage(
         { type: "BOOT", runtime: data.runtime, assets },
-        Object.values(assets).filter(
-          (value): value is ArrayBuffer => value instanceof ArrayBuffer,
-        ),
+        [
+          port,
+          ...Object.values(assets).filter(
+            (value): value is ArrayBuffer => value instanceof ArrayBuffer,
+          ),
+        ],
       );
     } else if (data.type === "RUN") {
       if (typeof data.runId !== "string" || typeof data.code !== "string")
@@ -663,8 +701,10 @@ function sandboxRelayMain(
         return;
       }
       if (run) return;
-      const current = startWorker(runId, workerUrl, { name: "playground-run" });
-      current?.worker.postMessage({ type: "RUN", code: data.code });
+      const created = startWorker(runId, workerUrl, { name: "playground-run" });
+      created?.current.worker.postMessage({ type: "RUN", code: data.code }, [
+        created.port,
+      ]);
     } else if (data.type === "STOP") {
       if (run && data.runId === run.id) stop();
     }

@@ -176,6 +176,7 @@ function compileCxxRuntime(runClang: RunClang): Promise<Uint8Array> {
 
 async function handle(request: ClangRequest): Promise<ClangResult> {
   const runClang = await toolchain;
+  post({ id: request.id, type: "started" });
   const fileName = FILE_NAMES[request.language];
   const driver = request.language === "c" ? "clang" : "clang++";
   const flags = [...FLAGS[request.language], ...COMMON_FLAGS];

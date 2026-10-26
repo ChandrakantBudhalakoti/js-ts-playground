@@ -19,5 +19,7 @@ export type ClangResponse =
   | { id: 0; type: "progress"; loaded: number; total: number }
   | { id: 0; type: "ready"; version: string }
   | { id: 0; type: "init-error"; message: string }
+  /** The worker began this request (the client's time limit starts now). */
+  | { id: number; type: "started" }
   | { id: number; type: "result"; result: ClangResult }
   | { id: number; type: "error"; message: string };
