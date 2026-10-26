@@ -14,7 +14,7 @@ changes are all welcome.
 
 ## Set up
 
-You need Node.js 20.19 or newer (CI uses the version in `.nvmrc`) and npm.
+You need Node.js 22 or newer (CI uses the version in `.nvmrc`) and npm.
 
 ```bash
 git clone https://github.com/ChandrakantBudhalakoti/js-ts-playground.git

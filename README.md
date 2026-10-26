@@ -21,11 +21,11 @@ links and saved drafts still work. The display name is `SITE_NAME` in
 · [Open the editor](https://js-ts-playground-eight.vercel.app/playground)
 · [Examples](https://js-ts-playground-eight.vercel.app/examples)
 
-![The playground running a TypeScript example: code in the editor, and the console below showing its output and "Completed in 2 ms"](docs/images/playground.png)
+![CodeSlate running a Python example: code in the editor, and the console below showing its output and "Completed in 16 ms"](docs/images/playground.png)
 
 ## Demo
 
-![Demo: from the home page, Start Coding opens the editor; a line with a type error is underlined and listed in the Problems panel; after the fix the code runs and a share link is copied](docs/images/demo.gif)
+![Demo: from the home page, Start Coding opens the editor; the language menu lists all ten languages; in C, a missing semicolon is underlined by Clang and listed in the Problems panel; after the fix the program compiles and runs, then a Python example runs and a share link is copied](docs/images/demo.gif)
 
 ## Features
 
@@ -138,7 +138,7 @@ Share links created before the editor moved to `/playground` point at
 
 ## Quick start
 
-Requirements: Node.js 20.19 or newer (CI uses Node 24, see `.nvmrc`) and npm.
+Requirements: Node.js 22 or newer (CI uses Node 24, see `.nvmrc`) and npm.
 
 ```bash
 npm install      # also copies Monaco, the TypeScript libs and the language runtimes into public/vendor
