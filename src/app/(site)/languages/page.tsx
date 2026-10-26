@@ -57,10 +57,12 @@ export default function LanguagesPage() {
                 <PlaygroundLink
                   href={playgroundHref(DEFAULT_EXAMPLE[info.id].id)}
                   className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
-                  aria-label={`Open the ${info.name} playground`}
                 >
                   <Play className="size-3.5 fill-current" aria-hidden />
+                  {/* The name starts with the visible text (WCAG 2.5.3), so
+                      voice control users can say what they see. */}
                   Open in the playground
+                  <span className="sr-only"> ({info.name})</span>
                 </PlaygroundLink>
               </li>
             ))}
