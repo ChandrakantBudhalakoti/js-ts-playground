@@ -1,12 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import {
-  currentLocale,
-  type Locale,
-  subscribeLocale,
-  t,
-} from "@/lib/i18n";
+import { currentLocale, type Locale, subscribeLocale, t } from "@/lib/i18n";
 
 /** The interface language; English until the saved choice has loaded. */
 export function useLocale(): Locale {

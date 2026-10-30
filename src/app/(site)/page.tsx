@@ -52,7 +52,7 @@ const FEATURES = [
   {
     icon: Languages,
     title: "Ten languages",
-    text: "Python, C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R, each on its real compiler or interpreter: CPython, Clang, CRuby, PHP, webR and more.",
+    text: "Python, C, C++, Java, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R, each on a real compiler or interpreter: CPython, Clang, javac, CRuby, PHP, webR and more.",
   },
   {
     icon: FileCheck2,
@@ -79,7 +79,7 @@ const FEATURES = [
 const STEPS = [
   {
     title: "Pick a language",
-    text: "Python, C, C++, JavaScript or any of the others. Each opens with a working example to learn from.",
+    text: "Python, C, C++, Java, JavaScript or any of the others. Each opens with a working example to learn from.",
   },
   {
     title: "Write your code",
@@ -95,7 +95,8 @@ const LIMITATIONS = [
   "There are no package managers: each language comes with its standard library, but npm, pip, Go modules and gems can't be installed.",
   "Programs can't open files or use the network.",
   "C++ exceptions are not supported: a throw ends the program with its message.",
-  "The first run of Python, C, C++, Go, Ruby, PHP, Lua or R downloads its runtime once (0.2 to 27 MB): the size is shown first, and you choose. After that it works offline.",
+  "The first run of Python, C, C++, Java, Go, Ruby, PHP, Lua or R downloads its runtime once (0.2 to 27 MB): the size is shown first, and you choose. After that it works offline.",
+  "Java reads input with Scanner; printf with %f (decimal places) and BufferedReader are not available in the browser yet.",
   "Each run has a time limit, 5 seconds by default and up to 30 seconds.",
 ];
 
@@ -134,9 +135,9 @@ export default function HomePage() {
             </h1>
             <p className="mt-5 max-w-xl text-lg text-pretty text-muted-foreground">
               {SITE_NAME} is a free online compiler and code editor for Python,
-              C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R. Write a
-              program, press Run and see what it does. Everything runs in your
-              browser, so all you need is the device you already have.
+              C, C++, Java, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R.
+              Write a program, press Run and see what it does. Everything runs
+              in your browser, so all you need is the device you already have.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="h-11 px-5">

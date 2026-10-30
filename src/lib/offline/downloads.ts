@@ -22,6 +22,7 @@ export type DownloadStatus = "checking" | "ask" | "allowed" | "downloaded";
 export const DOWNLOADS: readonly { id: AssetBundleId; name: string }[] = [
   { id: "python", name: "Python" },
   { id: "clang", name: "C and C++" },
+  { id: "java", name: "Java" },
   { id: "go", name: "Go" },
   { id: "ruby", name: "Ruby" },
   { id: "php", name: "PHP" },

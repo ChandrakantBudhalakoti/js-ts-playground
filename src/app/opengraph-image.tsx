@@ -58,8 +58,9 @@ export default function OpenGraphImage() {
         >
           Learn to Code on Any Phone, Tablet or PC
         </div>
-        <div style={{ fontSize: 30, color: "#a3a3a3" }}>
-          Python · C · C++ · JavaScript · TypeScript · Go · Ruby · PHP · Lua · R
+        <div style={{ fontSize: 28, color: "#a3a3a3" }}>
+          Python · C · C++ · Java · JavaScript · TypeScript · Go · Ruby · PHP ·
+          Lua · R
         </div>
       </div>
 

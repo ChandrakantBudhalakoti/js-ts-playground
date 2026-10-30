@@ -538,6 +538,23 @@ describe("sandbox relay script: WebAssembly runtimes", () => {
     expect(relay.toHost.filter((m) => m.type === "BOOTED")).toHaveLength(1);
   });
 
+  it("forwards STARTED once, and only once the code was sent", () => {
+    const { relay, worker } = booted();
+    const started = () => relay.toHost.filter((m) => m.type === "STARTED");
+    worker.emit({ type: "STARTED", elapsedMs: 20 });
+    expect(started()).toHaveLength(0);
+    relay.send({ type: "RUN", runId: RUN_ID, code: "class Main {}" });
+    worker.emit({ type: "STARTED", elapsedMs: 900 });
+    worker.emit({ type: "STARTED", elapsedMs: 901 });
+    expect(started()).toHaveLength(1);
+    expect(parseRuntimeMessage(started()[0])).toEqual({
+      channel: RUNTIME_CHANNEL,
+      type: "STARTED",
+      runId: RUN_ID,
+      elapsedMs: 900,
+    });
+  });
+
   it("reports a runtime that fails to boot", () => {
     const relay = startRelay();
     relay.send({ type: "BOOT", runId: RUN_ID, runtime: "r", assets: {} });

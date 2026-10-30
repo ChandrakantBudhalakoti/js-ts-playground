@@ -56,12 +56,12 @@ export const HOME_FAQS: Faq[] = [
   {
     question: "Which languages can I run?",
     answer:
-      "JavaScript and TypeScript, plus Python, C, C++, Go, Ruby, PHP, Lua and R. Those run on WebAssembly builds of their usual implementations: CPython, Clang, the Yaegi Go interpreter, CRuby, PHP, Lua and webR. Programs that read standard input get the text of the Input tab.",
+      "JavaScript and TypeScript, plus Python, C, C++, Java, Go, Ruby, PHP, Lua and R. Those run on WebAssembly builds of their usual implementations: CPython, Clang, OpenJDK's javac with TeaVM, the Yaegi Go interpreter, CRuby, PHP, Lua and webR. Programs that read standard input get the text of the Input tab.",
   },
   {
     question: "Are there programs for beginners?",
     answer:
-      "Yes. The examples include the classic first-year and lab-file programs (Hello World, even or odd, star patterns, Floyd's triangle, prime numbers, factorial, Fibonacci, palindromes, Armstrong numbers, arrays, sorting, strings, functions and recursion) in Python, C and C++. Each one is explained in plain English and opens in the playground with its sample input ready.",
+      "Yes. The examples include the classic first-year and lab-file programs (Hello World, even or odd, star patterns, Floyd's triangle, prime numbers, factorial, Fibonacci, palindromes, Armstrong numbers, arrays, sorting, strings, functions and recursion) in Python, C, C++ and Java. Each one is explained in plain English and opens in the playground with its sample input ready.",
   },
   {
     question: "Is my code sent to a server?",

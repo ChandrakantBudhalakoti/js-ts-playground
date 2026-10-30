@@ -181,6 +181,11 @@ and `src/lib/runtime/runtime-assets.json` together (`npm run dev` and a unit
 test fail if they differ), then run `npm run test:e2e`, which runs every
 example of every language in Chromium and the first one in Firefox.
 
+Java's files are not an npm package: they live in `runtimes/java` (TeaVM's
+in-browser compiler, plus a Java 21 API and a `Scanner` built by
+`runtimes/java/build-support.mjs`). Its README explains where each file comes
+from and how to update them.
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the

@@ -32,7 +32,9 @@ export function FriendlyError({
     let cancelled = false;
     void import("@/lib/friendly-errors").then(({ explainError }) => {
       if (!cancelled)
-        setExplanation(explainError(language, error, line, locale)?.text ?? null);
+        setExplanation(
+          explainError(language, error, line, locale)?.text ?? null,
+        );
     });
     return () => {
       cancelled = true;

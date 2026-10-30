@@ -344,6 +344,114 @@ int main() {
 `,
   },
 
+  // --- Java -----------------------------------------------------------------
+  {
+    id: "java-hello",
+    title: "Hello, Java",
+    description: "A Scanner reads your name from the Input tab",
+    language: "java",
+    stdin: "Riya\n",
+    code: String.raw`import java.util.Scanner;
+
+// Every Java program lives in a class. This one is called Main.
+public class Main {
+    // The program starts in the main method.
+    public static void main(String[] args) {
+        // Scanner reads what you type in the Input tab.
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("What is your name?");
+        String name = sc.nextLine();
+
+        System.out.println("Hello, " + name + "! Welcome to Java.");
+    }
+}
+`,
+  },
+  {
+    id: "java-classes",
+    title: "Classes and objects",
+    description: "A Student class with fields, a constructor and methods",
+    language: "java",
+    code: String.raw`// A class is a blueprint: every Student has a name and marks.
+class Student {
+    private String name;
+    private int[] marks;
+
+    // The constructor runs when a new Student is made.
+    Student(String name, int[] marks) {
+        this.name = name;
+        this.marks = marks;
+    }
+
+    int total() {
+        int sum = 0;
+        for (int mark : marks) {
+            sum += mark;
+        }
+        return sum;
+    }
+
+    // Rounded to one decimal place.
+    double average() {
+        return Math.round(total() * 10.0 / marks.length) / 10.0;
+    }
+
+    String grade() {
+        double average = average();
+        if (average >= 90) return "A";
+        if (average >= 75) return "B";
+        return "C";
+    }
+
+    String getName() {
+        return name;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Student[] students = {
+            new Student("Asha", new int[] {92, 88, 95}),
+            new Student("Kabir", new int[] {78, 81, 72}),
+            new Student("Meera", new int[] {64, 70, 59}),
+        };
+        for (Student student : students) {
+            System.out.println(student.getName() + ": total " + student.total()
+                    + ", average " + student.average() + ", grade " + student.grade());
+        }
+    }
+}
+`,
+  },
+  {
+    id: "java-input",
+    title: "Reading numbers",
+    description: "nextInt reads numbers from the Input tab in a loop",
+    language: "java",
+    stdin: "4\n12 7 30 11\n",
+    code: String.raw`import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        // The first number says how many follow.
+        int count = sc.nextInt();
+        int total = 0;
+        int largest = Integer.MIN_VALUE;
+        for (int i = 0; i < count; i++) {
+            int number = sc.nextInt();
+            total += number;
+            largest = Math.max(largest, number);
+        }
+        System.out.println("Read " + count + " numbers");
+        System.out.println("Total: " + total + ", largest: " + largest);
+    }
+}
+`,
+  },
+
   // --- Go -----------------------------------------------------------------
   {
     id: "go-hello",

@@ -80,6 +80,7 @@ describe("languages", () => {
 describe("runtime-assets.json", () => {
   it("pins the installed version of every runtime package", () => {
     for (const [id, spec] of Object.entries(RUNTIME_ASSETS)) {
+      if ("path" in spec) continue; // kept in this repository (below)
       const manifest = JSON.parse(
         readFileSync(
           join(root, ...spec.package.split("/"), "package.json"),
@@ -91,6 +92,17 @@ describe("runtime-assets.json", () => {
       const pinned = JSON.parse(readFileSync("package.json", "utf8"))
         .devDependencies[spec.package];
       expect(pinned, spec.package).toBe(spec.version);
+    }
+  });
+
+  it("has every file of the runtimes kept in this repository", () => {
+    for (const [id, spec] of Object.entries(RUNTIME_ASSETS)) {
+      if (!("path" in spec)) continue;
+      for (const source of Object.values(spec.files))
+        expect(
+          existsSync(join(process.cwd(), spec.path, source)),
+          `${id}: ${source}`,
+        ).toBe(true);
     }
   });
 });

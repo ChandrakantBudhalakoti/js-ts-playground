@@ -142,8 +142,12 @@ function runtimeFiles(packageRoot, spec) {
 }
 
 function copyRuntime(id, spec) {
-  const packageRoot = findPackageRoot(spec.package);
-  const version = versionOf(packageRoot);
+  // A runtime published as an npm package, or kept in this repository
+  // (`path`, e.g. runtimes/java: TeaVM publishes no package).
+  const packageRoot = spec.path
+    ? join(root, spec.path)
+    : findPackageRoot(spec.package);
+  const version = spec.path ? spec.version : versionOf(packageRoot);
   if (version !== spec.version) {
     throw new Error(
       `${spec.package} ${version} is installed, but src/lib/runtime/runtime-assets.json expects ${spec.version}. ` +

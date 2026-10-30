@@ -2,3 +2,7 @@
 # so `npm run format:check` / CI) expects LF, and Windows' core.autocrlf would
 # otherwise check files out with CRLF.
 * text=auto eol=lf
+
+# Runtime files kept in the repository (runtimes/java): never convert.
+*.wasm binary
+*.bin binary

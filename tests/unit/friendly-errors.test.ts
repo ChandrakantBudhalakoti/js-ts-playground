@@ -139,6 +139,13 @@ describe("friendly error rules", () => {
       "java.lang.ArrayIndexOutOfBoundsException: Index 5 out of bounds for length 3",
       "java-array-index",
     ],
+    ["java", "java.lang.ArithmeticException: / by zero", "java-divide-by-zero"],
+    [
+      "java",
+      "java.util.NoSuchElementException: No line found",
+      "java-no-input",
+    ],
+    ["java", "java.lang.StackOverflowError", "java-stack-overflow"],
     ["javascript", "ReferenceError: totl is not defined", "js-not-defined"],
     [
       "typescript",

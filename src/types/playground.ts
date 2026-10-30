@@ -4,6 +4,7 @@ export type Language =
   | "python"
   | "c"
   | "cpp"
+  | "java"
   | "go"
   | "ruby"
   | "php"
@@ -19,7 +20,7 @@ export type ScriptLanguage = "javascript" | "typescript";
  * program compiled by Clang) loaded into the sandbox's worker.
  */
 export type RuntimeId =
-  "js" | "python" | "lua" | "ruby" | "php" | "go" | "r" | "wasi";
+  "js" | "python" | "lua" | "ruby" | "php" | "go" | "r" | "java" | "wasi";
 
 /** Runtimes that are booted from downloaded files before they can run code. */
 export type WasmRuntimeId = Exclude<RuntimeId, "js">;
@@ -129,6 +130,8 @@ export type RuntimeMessage =
   | { channel: string; type: "READY" }
   /** A WebAssembly runtime finished booting and waits for code. */
   | { channel: string; type: "BOOTED"; runId: string; elapsedMs: number }
+  /** A runtime that compiles in the sandbox finished compiling; the program starts. */
+  | { channel: string; type: "STARTED"; runId: string; elapsedMs: number }
   | {
       channel: string;
       type: "LOG";

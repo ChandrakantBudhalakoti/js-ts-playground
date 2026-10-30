@@ -23,7 +23,7 @@ import type { CodeExample } from "@/types/playground";
 export const metadata = pageMetadata({
   title: "Code Examples to Run Online",
   description:
-    "Runnable examples in Python, C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R: beginner programs, guides and more. Filter by language and level.",
+    "Runnable examples in Python, C, C++, Java, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R: beginner programs, guides and more. Filter by language and level.",
   path: "/examples",
 });
 

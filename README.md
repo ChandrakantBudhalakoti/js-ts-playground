@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A free, open-source online code editor and compiler for Python, C, C++,
+A free, open-source online code editor and compiler for Python, C, C++, Java,
 JavaScript, TypeScript, Go, Ruby, PHP, Lua and R, built first for phones and
 tablets, so anyone can learn to code without a laptop. Write code in a VS
 Code-style editor (Monaco), get autocomplete and real TypeScript type checking
@@ -42,8 +42,8 @@ address `SITE_URL`, both in `src/lib/site.ts`.
   diagnostic, matching the editor's squiggles. Click one to jump to it. C and
   C++ are checked by Clang as you type. Other languages report errors when
   they run, with a link to the failing line.
-- **Ten languages:** JavaScript and TypeScript run natively; Python, C, C++,
-  Go, Ruby, PHP, Lua and R run on WebAssembly builds of their usual
+- **Eleven languages:** JavaScript and TypeScript run natively; Python, C,
+  C++, Java, Go, Ruby, PHP, Lua and R run on WebAssembly builds of their usual
   interpreters and compilers (see [Languages](#languages)). Each one is
   downloaded the first time you pick it.
 - **Sandboxed execution:** a sandboxed iframe with an opaque origin runs your
@@ -61,11 +61,10 @@ address `SITE_URL`, both in `src/lib/site.ts`.
   programs (Hello World, input and output, even/odd, star patterns, Floyd's
   triangle, prime numbers, factorial, Fibonacci, palindromes, Armstrong
   numbers, arrays, linear search, bubble sort, matrix addition, strings,
-  functions, recursion) in Python, C and C++, each with a plain-English
+  functions, recursion) in Python, C, C++ and Java, each with a plain-English
   explanation, sample input already in the Input tab, and its output. Each has
-  its own page, such as `/examples/c/star-pattern-pyramid`, and the examples
-  page filters by language and level. Java versions are written and checked,
-  and appear once Java runs in the playground.
+  its own page, such as `/examples/java/star-pattern-pyramid`, and the
+  examples page filters by language and level.
 - **Offline and data-friendly:** a service worker saves the app, the editor,
   the TypeScript compiler and each language runtime the first time they are
   used, so anything used once works without internet. Before a language's
@@ -126,6 +125,7 @@ the app downloads from its own origin the first time you pick the language
 | Python     | CPython 3.14 ([Pyodide](https://pyodide.org))                               | 7 MB           | yes   | –                     |
 | C          | Clang 22 → WASI ([YoWASP](https://yowasp.org)), C17                         | 27 MB          | yes   | Clang                 |
 | C++        | Clang 22 → WASI, C++20 with libc++                                          | 27 MB          | yes   | Clang                 |
+| Java       | OpenJDK `javac` + [TeaVM](https://teavm.org) → WebAssembly (Java 21)        | 4.5 MB         | yes   | –                     |
 | Go         | [Yaegi](https://github.com/traefik/yaegi) Go interpreter                    | 9 MB           | yes   | –                     |
 | Ruby       | CRuby 3.4 ([ruby.wasm](https://github.com/ruby/ruby.wasm))                  | 9 MB           | yes   | –                     |
 | PHP        | PHP 8.4 CLI ([php-wasm](https://github.com/WordPress/wordpress-playground)) | 8 MB           | yes   | –                     |
@@ -137,6 +137,14 @@ What to expect from each:
 - **Python:** the standard library only (no `pip`, no NumPy). `input()` reads
   the Input tab; `print` output appears as it is printed. Tracebacks keep only
   your own frames and link to the failing line.
+- **Java:** OpenJDK's `javac` and TeaVM, both compiled to WebAssembly, turn
+  the program into WebAssembly in the sandbox on each run (a second or two;
+  WasmGC, so Chrome 119, Firefox 120 or Safari 18.2 and newer). Any class with
+  `main` runs. `Scanner` reads the Input tab; compile errors link to their
+  line; uncaught exceptions show their type and message. Not available yet:
+  `printf`/`String.format` with `%f`, `BufferedReader` with
+  `InputStreamReader`, and catching an index outside an array. See
+  `runtimes/java/README.md`.
 - **C and C++:** Clang compiles to WebAssembly in a worker of the app, so the
   first C++ compile of a session takes a few seconds (the standard headers
   are large). Compile errors and warnings (`-Wall`) appear in the Problems
@@ -159,19 +167,19 @@ starts in the background, so later runs don't wait for the runtime to boot.
 
 ## Pages
 
-| Route                                                         | What it is                                                                                                                |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                                           | Landing page: features, how it works, limitations, FAQ                                                                    |
-| `/playground`                                                 | The editor. `?example=<id>` opens an example; `#lang=…&code=…` is a share link                                            |
-| `/languages`                                                  | Every language, grouped, with links to its page and the editor                                                            |
-| `/javascript`, `/typescript`                                  | What each language supports, the runtime environment, compiler settings and examples                                      |
-| `/python`, `/c`, `/cpp`, `/go`, `/ruby`, `/php`, `/lua`, `/r` | What runs and what doesn't, the runtime, examples and an FAQ (`src/lib/language-pages.ts`)                                |
-| `/manifest.webmanifest`, `/icon/<id>`, `/apple-icon/<id>`     | Web app manifest and generated app icons                                                                                  |
-| `/examples`, `/examples/<slug>`                               | All examples (filter by language and level), and guides for async/await, array methods, promises, interfaces and generics |
-| `/examples/<language>`, `/examples/<language>/<program>`      | Beginner programs per language (`/examples/python`), and one page per program (`/examples/c/prime-number`)                |
-| `/sandbox`                                                    | The page the code runs in (framed by the editor, `X-Robots-Tag: noindex`)                                                 |
-| `/sw.js`                                                      | The service worker that keeps the app and used languages working offline (`src/lib/offline/service-worker.ts`)            |
-| `/sitemap.xml`, `/robots.txt`, `/opengraph-image`             | Generated sitemap, robots rules and social-sharing image                                                                  |
+| Route                                                                  | What it is                                                                                                                |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                                                    | Landing page: features, how it works, limitations, FAQ                                                                    |
+| `/playground`                                                          | The editor. `?example=<id>` opens an example; `#lang=…&code=…` is a share link                                            |
+| `/languages`                                                           | Every language, grouped, with links to its page and the editor                                                            |
+| `/javascript`, `/typescript`                                           | What each language supports, the runtime environment, compiler settings and examples                                      |
+| `/python`, `/c`, `/cpp`, `/java`, `/go`, `/ruby`, `/php`, `/lua`, `/r` | What runs and what doesn't, the runtime, examples and an FAQ (`src/lib/language-pages.ts`)                                |
+| `/manifest.webmanifest`, `/icon/<id>`, `/apple-icon/<id>`              | Web app manifest and generated app icons                                                                                  |
+| `/examples`, `/examples/<slug>`                                        | All examples (filter by language and level), and guides for async/await, array methods, promises, interfaces and generics |
+| `/examples/<language>`, `/examples/<language>/<program>`               | Beginner programs per language (`/examples/python`), and one page per program (`/examples/c/prime-number`)                |
+| `/sandbox`                                                             | The page the code runs in (framed by the editor, `X-Robots-Tag: noindex`)                                                 |
+| `/sw.js`                                                               | The service worker that keeps the app and used languages working offline (`src/lib/offline/service-worker.ts`)            |
+| `/sitemap.xml`, `/robots.txt`, `/opengraph-image`                      | Generated sitemap, robots rules and social-sharing image                                                                  |
 
 Share links created before the editor moved to `/playground` point at
 `/#lang=…&code=…`; the home page forwards them, so they keep working.
@@ -274,7 +282,7 @@ src/
     clang/                    Clang worker, its client and diagnostics parser (C/C++)
     runtime/                  Sandbox document, parent runtime, protocol validation, serializer
       runtime-worker.ts         Worker for non-JavaScript languages: virtual network, stdio
-      drivers/                  One driver per runtime (Python, Lua, Ruby, PHP, Go, R, WASI)
+      drivers/                  One driver per runtime (Python, Lua, Ruby, PHP, Go, R, Java, WASI)
       assets.ts                 Downloads and caches runtime files
       runtime-assets.json       Runtime packages, versions and files (also read by the build)
     languages.ts              The language registry (names, files, runtimes, share codes)

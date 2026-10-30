@@ -417,6 +417,39 @@ export const RULES: readonly FriendlyRule[] = [
         "Program ne aisa object use kiya jo abhi bana hi nahi hai (null), jaise koi variable jise kabhi new se value nahi di gayi.",
     },
   },
+  {
+    id: "java-divide-by-zero",
+    languages: ["java"],
+    pattern: /ArithmeticException: \/ by zero/,
+    text: {
+      en: "The program divided a whole number by zero, which has no answer. Check the number before dividing, for example with if (divisor != 0).",
+      hi: "Program ने किसी पूरी संख्या को zero से भाग दिया, जिसका कोई जवाब नहीं होता। भाग देने से पहले संख्या जाँचें, जैसे if (divisor != 0) से।",
+      hinglish:
+        "Program ne kisi whole number ko zero se divide kiya, jiska koi answer nahi hota. Divide karne se pehle number check karo, jaise if (divisor != 0) se.",
+    },
+  },
+  {
+    id: "java-no-input",
+    languages: ["java"],
+    pattern: /NoSuchElementException/,
+    text: {
+      en: "Scanner found nothing more to read. Type the program's input in the Input tab, with a value for every nextInt(), next() and nextLine().",
+      hi: "Scanner को पढ़ने के लिए और कुछ नहीं मिला। Program का input Input tab में लिखें, हर nextInt(), next() और nextLine() के लिए एक value।",
+      hinglish:
+        "Scanner ko padhne ke liye aur kuch nahi mila. Program ka input Input tab mein likho, har nextInt(), next() aur nextLine() ke liye ek value.",
+    },
+  },
+  {
+    id: "java-stack-overflow",
+    languages: ["java"],
+    pattern: /StackOverflowError/,
+    text: {
+      en: "A method kept calling itself and never stopped. A recursive method needs a base case: a condition where it returns without calling itself again.",
+      hi: "एक method खुद को बार-बार call करता रहा और कभी रुका नहीं। Recursive method को एक base case चाहिए: ऐसी condition जहाँ वह खुद को फिर से call किए बिना return करे।",
+      hinglish:
+        "Ek method khud ko baar-baar call karta raha aur kabhi ruka nahi. Recursive method ko ek base case chahiye: aisi condition jahan woh khud ko dobara call kiye bina return kare.",
+    },
+  },
 
   // --- JavaScript and TypeScript ----------------------------------------------
   {

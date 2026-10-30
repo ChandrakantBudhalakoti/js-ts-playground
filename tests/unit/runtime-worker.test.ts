@@ -49,6 +49,7 @@ function probeDriver(host: DriverHost) {
         importScriptsThrows = true;
       }
       host.stdout.write(`importScripts throws: ${importScriptsThrows}\n`);
+      if (code === "compiled") host.started();
       if (code === "fail") {
         host.reportError({ name: "Oops", message: "bad thing", line: 3 });
         return 1;
@@ -162,6 +163,22 @@ describe("runtime worker", () => {
       error: { name: "Oops", message: "bad thing", line: 3, column: 1 },
     });
     expect(await worker.next("DONE")).toMatchObject({ exitCode: 1 });
+  });
+
+  it("says when a compiled program starts", async () => {
+    const worker = startRuntimeWorker();
+    worker.send({
+      type: "BOOT",
+      runtime: "probe",
+      assets: { "hello.txt": worker.buffer("") },
+    });
+    await worker.next("BOOTED");
+    worker.send({ type: "RUN", code: "compiled" });
+    expect(await worker.next("STARTED")).toMatchObject({
+      type: "STARTED",
+      elapsedMs: expect.any(Number),
+    });
+    await worker.next("DONE");
   });
 
   it("reports a driver that throws as an error", async () => {

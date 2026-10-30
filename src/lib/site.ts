@@ -21,7 +21,7 @@ export const SITE_NAME = "CodeTakhti";
 export const SITE_TITLE = `${SITE_NAME} – Free Online Compiler for Phone, Tablet and PC`;
 
 export const SITE_DESCRIPTION =
-  "Run Python, C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R online on your phone, tablet or PC. Free code editor, no install, no account.";
+  "Run Python, C, C++, Java, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R online on your phone, tablet or PC. Free code editor, no install, no account.";
 
 export const REPO_URL =
   "https://github.com/ChandrakantBudhalakoti/js-ts-playground";
@@ -44,6 +44,7 @@ export const STATIC_ROUTES = [
   "/python",
   "/c",
   "/cpp",
+  "/java",
   "/go",
   "/ruby",
   "/php",
