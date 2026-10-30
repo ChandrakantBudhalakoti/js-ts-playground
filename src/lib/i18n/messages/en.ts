@@ -21,7 +21,8 @@ export const en = {
   "toolbar.downloading": "Downloading {name}",
   "toolbar.notDownloaded": "Not downloaded",
   "toolbar.notDownloadedTitle": "{name} is not downloaded yet",
-  "toolbar.interfaceLanguage": "Interface language",
+  "toolbar.switchToHindi": "Switch to Hindi",
+  "toolbar.switchToEnglish": "Switch to English",
 
   // Run status
   "status.idle": "Idle",
@@ -151,7 +152,8 @@ export const en = {
   "run.compilingFirst":
     "Compiling {file} (the compiler downloads once, about {size})…",
   "run.cannotCompile": "Cannot compile {name}: {message}",
-  "run.compileFailed": "Compilation failed with {errors}. See the Problems panel.",
+  "run.compileFailed":
+    "Compilation failed with {errors}. See the Problems panel.",
   "run.compiled": "Compiled {file} in {seconds} s.",
   "run.compiledWarnings":
     "Compiled {file} in {seconds} s with {warnings} (see the Problems panel).",

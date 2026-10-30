@@ -1,61 +1,32 @@
 "use client";
 
-import { Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useLocale, useT } from "@/hooks/useLocale";
-import { isLocale, LOCALES, setLocale } from "@/lib/i18n";
+import { setLocale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
-/** The interface languages, as radio items (for a menu). */
-export function InterfaceLanguageItems() {
+/**
+ * Switches the interface between English and Hindi in one tap: it shows
+ * the language it switches to. Everyone starts in English; Hinglish is in
+ * Settings (from Hinglish, this switches back to English).
+ */
+export function InterfaceLanguageToggle({ className }: { className?: string }) {
   const locale = useLocale();
-  return (
-    <DropdownMenuRadioGroup
-      value={locale}
-      onValueChange={(value) => isLocale(value) && setLocale(value)}
-    >
-      {LOCALES.map((option) => (
-        <DropdownMenuRadioItem
-          key={option.id}
-          value={option.id}
-          lang={option.htmlLang}
-        >
-          {option.name}
-        </DropdownMenuRadioItem>
-      ))}
-    </DropdownMenuRadioGroup>
-  );
-}
-
-/** A toolbar button that switches the interface language. */
-export function InterfaceLanguageMenu({ className }: { className?: string }) {
   const t = useT();
+  const toHindi = locale === "en";
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("toolbar.interfaceLanguage")}
-          title={t("toolbar.interfaceLanguage")}
-          className={className}
-        >
-          <Languages aria-hidden />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel className="text-xs text-muted-foreground">
-          {t("toolbar.interfaceLanguage")}
-        </DropdownMenuLabel>
-        <InterfaceLanguageItems />
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      variant="ghost"
+      size="sm"
+      data-testid="interface-language-toggle"
+      onClick={() => setLocale(toHindi ? "hi" : "en")}
+      className={cn("h-8 min-w-9 px-2 text-xs font-semibold", className)}
+    >
+      {/* The visible text is part of the accessible name (WCAG 2.5.3). */}
+      <span lang={toHindi ? "hi" : "en"}>{toHindi ? "हिं" : "EN"}</span>
+      <span className="sr-only">
+        {` (${t(toHindi ? "toolbar.switchToHindi" : "toolbar.switchToEnglish")})`}
+      </span>
+    </Button>
   );
 }

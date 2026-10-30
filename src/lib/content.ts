@@ -36,7 +36,7 @@ export const HOME_FAQS: Faq[] = [
   {
     question: "Is it available in Hindi?",
     answer:
-      "Yes. The playground can be used in English, Hindi or Hinglish (Hindi in Latin letters): pick one from the language button in the editor's toolbar or in Settings. When a program fails, a short explanation of common errors appears under the real error message in the language you chose. Your code and its output are never translated.",
+      "Yes. The playground starts in English, and the हिं / EN button in the editor's toolbar switches it to Hindi and back; Settings also offers Hinglish (Hindi in Latin letters). When a program fails, a short explanation of common errors appears under the real error message in the language you chose. Your code and its output are never translated.",
   },
   {
     question: "Does it work offline?",

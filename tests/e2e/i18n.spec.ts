@@ -13,12 +13,11 @@ import {
  * Program output is never translated.
  */
 test.describe("interface language", () => {
-  test("switches to Hindi and Hinglish, and is remembered", async ({
+  test("the हिं / EN toggle switches to Hindi, Settings has Hinglish, and it is remembered", async ({
     page,
   }) => {
     await openPlayground(page, { code: "console.log('नमस्ते, Ada');" });
-    await page.getByRole("button", { name: "Interface language" }).click();
-    await page.getByRole("menuitemradio", { name: "हिन्दी" }).click();
+    await page.getByRole("button", { name: "हिं (Switch to Hindi)" }).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "hi");
     await expect(page.getByRole("button", { name: "उदाहरण" })).toBeVisible();
 
@@ -43,21 +42,26 @@ test.describe("interface language", () => {
     ).toBeVisible();
     await page.keyboard.press("Escape");
 
-    // And back to English.
-    await page.getByRole("button", { name: "App ki bhasha" }).click();
-    await page.getByRole("menuitemradio", { name: "English" }).click();
+    // The toggle goes back to English from Hinglish too.
+    await page.getByRole("button", { name: "EN (English mein badlo)" }).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.getByRole("button", { name: "Examples" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "हिं (Switch to Hindi)" }),
+    ).toBeVisible();
   });
 
-  test("starts in Hindi when the browser asks for Hindi", async ({
+  test("everyone starts in English, even with a Hindi browser", async ({
     browser,
   }) => {
     const context = await browser.newContext({ locale: "hi-IN" });
     const page = await context.newPage();
     await openPlayground(page, { code: "console.log(1)" });
-    await expect(page.locator("html")).toHaveAttribute("lang", "hi");
-    await expect(page.getByRole("button", { name: "उदाहरण" })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page.getByRole("button", { name: "Examples" })).toBeVisible();
+    await expect(page.getByTestId("interface-language-toggle")).toHaveText(
+      /हिं/,
+    );
     await context.close();
   });
 });
@@ -80,8 +84,7 @@ test.describe("friendly error explanations", () => {
     );
     await friendly.getByRole("button", { name: "Go to line 2" }).click();
 
-    await page.getByRole("button", { name: "Interface language" }).click();
-    await page.getByRole("menuitemradio", { name: "हिन्दी" }).click();
+    await page.getByTestId("interface-language-toggle").click();
     await expect(friendly).toContainText("इसका मतलब क्या है");
     await expect(error).toContainText("totl is not defined");
   });

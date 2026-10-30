@@ -19,8 +19,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -42,10 +40,7 @@ import type {
 } from "@/types/playground";
 import { ExamplesMenu } from "./ExamplesMenu";
 import { ExecutionStatusBadge } from "./ExecutionStatusBadge";
-import {
-  InterfaceLanguageItems,
-  InterfaceLanguageMenu,
-} from "./InterfaceLanguage";
+import { InterfaceLanguageToggle } from "./InterfaceLanguage";
 import { LanguageSelector } from "./LanguageSelector";
 import { SettingsPopover } from "./SettingsPopover";
 
@@ -283,16 +278,10 @@ export function EditorToolbar(props: EditorToolbarProps) {
             <DropdownMenuItem onSelect={onShare}>
               <Share2 aria-hidden /> {t("toolbar.share")}
             </DropdownMenuItem>
-            {/* Phones: the interface language lives here (no room in the bar). */}
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              {t("toolbar.interfaceLanguage")}
-            </DropdownMenuLabel>
-            <InterfaceLanguageItems />
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <InterfaceLanguageMenu className="hidden sm:inline-flex" />
+        <InterfaceLanguageToggle />
 
         <SettingsPopover
           settings={props.settings}

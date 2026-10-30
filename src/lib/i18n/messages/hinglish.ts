@@ -19,7 +19,8 @@ export const hinglish: Messages = {
   "toolbar.downloading": "{name} download ho raha hai",
   "toolbar.notDownloaded": "Download nahi hua",
   "toolbar.notDownloadedTitle": "{name} abhi download nahi hua hai",
-  "toolbar.interfaceLanguage": "App ki bhasha",
+  "toolbar.switchToHindi": "Hindi mein badlo",
+  "toolbar.switchToEnglish": "English mein badlo",
 
   // Run status
   "status.idle": "Ready",

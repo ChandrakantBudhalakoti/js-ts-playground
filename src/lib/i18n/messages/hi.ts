@@ -19,7 +19,8 @@ export const hi: Messages = {
   "toolbar.downloading": "{name} download हो रहा है",
   "toolbar.notDownloaded": "Download नहीं हुआ",
   "toolbar.notDownloadedTitle": "{name} अभी download नहीं हुआ है",
-  "toolbar.interfaceLanguage": "App की भाषा",
+  "toolbar.switchToHindi": "हिन्दी में बदलें",
+  "toolbar.switchToEnglish": "English में बदलें",
 
   // Run status
   "status.idle": "तैयार",

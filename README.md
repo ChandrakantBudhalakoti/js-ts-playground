@@ -74,10 +74,10 @@ address `SITE_URL`, both in `src/lib/site.ts`.
   downloaded twice. Settings → Downloaded languages lists what is saved, with
   sizes, and removes a language to free space. An Offline badge shows when
   there is no connection.
-- **Hindi and Hinglish:** the playground's interface is in English, Hindi
-  (हिन्दी) or Hinglish (Hindi in Latin script), from the language button in the
-  toolbar (the ⋯ menu on phones) or Settings. The choice is remembered, and a
-  browser set to Hindi starts in Hindi. Code and program output are never
+- **Hindi and Hinglish:** everyone starts in English; the **हिं / EN** button
+  in the toolbar (on every screen size) switches the interface to Hindi
+  (हिन्दी) and back, and Settings also offers Hinglish (Hindi in Latin
+  script). The choice is remembered. Code and program output are never
   translated; the site's articles stay in English.
 - **Friendly error explanations:** under the most common beginner errors
   (Python indentation, missing colons, NameError, adding text and numbers,

@@ -118,10 +118,8 @@ test.describe("phone and tablet layout", () => {
     await expect(page.getByRole("tab", { name: /Console/ })).toBeInViewport();
     await context.setOffline(false);
 
-    // In Hindi too, chosen from the overflow menu (phones have no room for
-    // the language button).
-    await page.getByRole("button", { name: "More actions" }).click();
-    await page.getByRole("menuitemradio", { name: "हिन्दी" }).click();
+    // In Hindi too, with the हिं / EN toggle in the header.
+    await page.getByTestId("interface-language-toggle").click();
     await expect(page.locator("html")).toHaveAttribute("lang", "hi");
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
     await expect(page.getByTestId("run-button")).toBeInViewport();

@@ -1,5 +1,5 @@
 import { readStorage, STORAGE_KEYS, writeStorage } from "@/lib/storage";
-import { defaultLocale, isLocale, LOCALES, type Locale } from "./locales";
+import { isLocale, LOCALES, type Locale } from "./locales";
 import { en, type MessageKey, type Messages } from "./messages/en";
 
 export { isLocale, LOCALES, type Locale, type MessageKey };
@@ -37,13 +37,12 @@ async function apply(next: Locale) {
   emit();
 }
 
-/** The saved choice, else Hindi for browsers set to Hindi, else English. */
+/** The saved choice; everyone else starts in English. */
 function start() {
   if (started || typeof window === "undefined") return;
   started = true;
   const saved = readStorage(STORAGE_KEYS.locale);
-  const initial = isLocale(saved) ? saved : defaultLocale();
-  if (initial !== "en") void apply(initial);
+  if (isLocale(saved) && saved !== "en") void apply(saved);
 }
 
 export function subscribeLocale(listener: () => void): () => void {
@@ -75,7 +74,8 @@ export function t(key: MessageKey, params?: Params): string {
 
 /** "1 error" / "3 errors": `key` names a pair of messages, `.one` and `.other`. */
 export function plural(
-  key: "count.error" | "count.warning" | "count.syntaxError" | "count.typeError",
+  key:
+    "count.error" | "count.warning" | "count.syntaxError" | "count.typeError",
   count: number,
 ): string {
   return t(`${key}.${count === 1 ? "one" : "other"}`, { count });
