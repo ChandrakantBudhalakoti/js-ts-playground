@@ -1,6 +1,6 @@
 # Security policy
 
-CodeSlate runs untrusted code in the browser, so its sandbox is the
+CodeTakhti runs untrusted code in the browser, so its sandbox is the
 most security-sensitive part of the project. The isolation model is described
 in [the README](README.md#security-model-and-production-setup).
 

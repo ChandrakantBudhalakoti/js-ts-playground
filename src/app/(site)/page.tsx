@@ -276,6 +276,21 @@ export default function HomePage() {
           </ul>
         </Section>
 
+        <Section id="about" heading={`Why “${SITE_NAME}”?`}>
+          <div className="max-w-2xl space-y-4 leading-relaxed text-muted-foreground">
+            <p>
+              A takhti (<span lang="hi">तख़्ती</span>) is the wooden slate
+              generations of Indian children practised writing on: write a
+              letter, wipe the board clean, and try again until it comes out
+              right. {SITE_NAME} is that slate for code.
+            </p>
+            <p className="font-medium text-foreground">
+              Learn to code on the device you already have, the way generations
+              learned to write on a takhti.
+            </p>
+          </div>
+        </Section>
+
         <Section id="faq" heading="Frequently asked questions">
           <FaqList faqs={HOME_FAQS} />
         </Section>

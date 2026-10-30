@@ -1,4 +1,4 @@
-# Contributing to CodeSlate
+# Contributing to CodeTakhti
 
 Thanks for helping! Bug reports, examples, documentation fixes and code
 changes are all welcome.

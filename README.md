@@ -1,4 +1,4 @@
-# CodeSlate
+# CodeTakhti
 
 [![CI](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -12,16 +12,20 @@ with a console for output and errors. Every language runs in your browser,
 compiled to WebAssembly: your code is never sent to a server. Nothing to
 install, no account.
 
-The project used to be called JS/TS Playground; the repository, the
-deployment URL and the browser storage keys keep that name, so existing
-links and saved drafts still work. The display name is `SITE_NAME` in
-`src/lib/site.ts`.
+A _takhti_ (तख़्ती) is the wooden slate generations of Indian children
+practised writing on. CodeTakhti is that slate for code: learn to code on the
+device you already have, the way generations learned to write on a takhti.
+
+The project was first called JS/TS Playground, then CodeSlate. The repository
+and the browser storage keys keep the original name, so existing links and
+saved drafts still work. The display name is `SITE_NAME` and the canonical
+address `SITE_URL`, both in `src/lib/site.ts`.
 
 **[Live demo: code-slatee.vercel.app](https://code-slatee.vercel.app/)**
 · [Open the editor](https://code-slatee.vercel.app/playground)
 · [Examples](https://code-slatee.vercel.app/examples)
 
-![CodeSlate running a Python example: code in the editor, and the console below showing its output and "Completed in 16 ms"](docs/images/playground.png)
+![CodeTakhti running a Python example: code in the editor, and the console below showing its output and "Completed in 18 ms"](docs/images/playground.png)
 
 ## Demo
 
@@ -415,11 +419,11 @@ bundle.
 
 Optional build-time environment variables:
 
-| Variable                   | Purpose                                                                                                                                                                        |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SITE_URL`                 | Canonical origin for canonical links, Open Graph URLs and the sitemap. Defaults to `https://code-slatee.vercel.app`. Set it on a fork or self-hosted copy with its own domain. |
-| `GOOGLE_SITE_VERIFICATION` | Token for Google Search Console's HTML-tag verification; adds `<meta name="google-site-verification">`.                                                                        |
-| `NEXT_PUBLIC_SANDBOX_URL`  | Separate sandbox origin (see above).                                                                                                                                           |
+| Variable                   | Purpose                                                                                                                                                                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_SITE_URL`     | Canonical origin for canonical links, og:url, the sitemap, robots.txt and structured data. Defaults to `https://code-slatee.vercel.app` (`SITE_URL` in `src/lib/site.ts`). Set it on a fork or self-hosted copy with its own domain. |
+| `GOOGLE_SITE_VERIFICATION` | Token for Google Search Console's HTML-tag verification; adds `<meta name="google-site-verification">`.                                                                                                                              |
+| `NEXT_PUBLIC_SANDBOX_URL`  | Separate sandbox origin (see above).                                                                                                                                                                                                 |
 
 ### Self-hosting
 

@@ -1,6 +1,6 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 import { DEFAULT_SETTINGS, TIMEOUTS } from "@/hooks/useEditorSettings";
@@ -51,6 +51,26 @@ describe("robots.txt", () => {
       rules: { userAgent: "*", allow: "/" },
       sitemap: `${SITE_URL}/sitemap.xml`,
     });
+  });
+});
+
+describe("NEXT_PUBLIC_SITE_URL", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("moves every canonical address to another domain", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://example.org/");
+    vi.resetModules();
+    const site = await import("@/lib/site");
+    const { default: sitemapOn } = await import("@/app/sitemap");
+    const { default: robotsOn } = await import("@/app/robots");
+    expect(site.SITE_URL).toBe("https://example.org");
+    expect(site.absoluteUrl("/")).toBe("https://example.org/");
+    for (const { url } of sitemapOn())
+      expect(new URL(url).origin).toBe("https://example.org");
+    expect(robotsOn().sitemap).toBe("https://example.org/sitemap.xml");
   });
 });
 
