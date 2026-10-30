@@ -148,6 +148,13 @@ body:has([data-playground]) {
   .monaco-editor textarea {
     font-size: 16px !important;
   }
+
+  /* A long press selects without opening the keyboard, so the editor is
+     often unfocused: show the selection in full colour, not the faint
+     unfocused one (TouchSelection). */
+  .monaco-editor .view-overlays .selected-text {
+    background-color: var(--vscode-editor-selectionBackground);
+  }
 }
 
 /* A close button big enough to tap on notifications. */

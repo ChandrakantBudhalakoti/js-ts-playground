@@ -79,12 +79,15 @@ test.describe("JavaScript runtime", () => {
 
   test("top-level await and timers complete the run", async ({ page }) => {
     await openPlayground(page, {
-      code: "await new Promise((r) => setTimeout(r, 100));\nconsole.log('awaited');\nsetTimeout(() => console.log('timer done'), 200);",
+      code: "await new Promise((r) => setTimeout(r, 100));\nconsole.log('awaited');\nsetTimeout(() => console.log('timer done'), 1500);",
     });
     await run(page);
+    // The pending timer keeps the run going after the last line. It is long
+    // enough to be seen: expect() polls at growing intervals (up to 1 s), so
+    // a shorter "running" state can fall between two polls.
+    await expect(consoleOutput(page)).toContainText("awaited");
     await expect(status(page)).toHaveAttribute("data-status", "running");
     await expectStatus(page, "completed");
-    await expect(consoleOutput(page)).toContainText("awaited");
     await expect(consoleOutput(page)).toContainText("timer done");
   });
 
