@@ -8,7 +8,7 @@
  * deployments keep pointing their canonical URLs at the real site.
  */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || "https://code-slatee.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL || "https://codetakhti.vercel.app"
 ).replace(/\/+$/, "");
 
 /**

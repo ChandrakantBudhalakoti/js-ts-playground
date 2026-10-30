@@ -42,7 +42,7 @@ describe("sitemap.xml", () => {
     for (const url of urls) {
       expect(new URL(url).origin).toBe(SITE_URL);
     }
-    expect(SITE_URL).toBe("https://code-slatee.vercel.app");
+    expect(SITE_URL).toBe("https://codetakhti.vercel.app");
   });
 
   it("does not list the sandbox page", () => {

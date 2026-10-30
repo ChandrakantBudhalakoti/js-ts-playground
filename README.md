@@ -21,9 +21,9 @@ and the browser storage keys keep the original name, so existing links and
 saved drafts still work. The display name is `SITE_NAME` and the canonical
 address `SITE_URL`, both in `src/lib/site.ts`.
 
-**[Live demo: code-slatee.vercel.app](https://code-slatee.vercel.app/)**
-· [Open the editor](https://code-slatee.vercel.app/playground)
-· [Examples](https://code-slatee.vercel.app/examples)
+**[Live demo: codetakhti.vercel.app](https://codetakhti.vercel.app/)**
+· [Open the editor](https://codetakhti.vercel.app/playground)
+· [Examples](https://codetakhti.vercel.app/examples)
 
 ![CodeTakhti running a Python example: code in the editor, and the console below showing its output and "Completed in 18 ms"](docs/images/playground.png)
 
@@ -481,11 +481,11 @@ bundle.
 
 Optional build-time environment variables:
 
-| Variable                   | Purpose                                                                                                                                                                                                                              |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `NEXT_PUBLIC_SITE_URL`     | Canonical origin for canonical links, og:url, the sitemap, robots.txt and structured data. Defaults to `https://code-slatee.vercel.app` (`SITE_URL` in `src/lib/site.ts`). Set it on a fork or self-hosted copy with its own domain. |
-| `GOOGLE_SITE_VERIFICATION` | Token for Google Search Console's HTML-tag verification; adds `<meta name="google-site-verification">`.                                                                                                                              |
-| `NEXT_PUBLIC_SANDBOX_URL`  | Separate sandbox origin (see above).                                                                                                                                                                                                 |
+| Variable                   | Purpose                                                                                                                                                                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`     | Canonical origin for canonical links, og:url, the sitemap, robots.txt and structured data. Defaults to `https://codetakhti.vercel.app` (`SITE_URL` in `src/lib/site.ts`). Set it on a fork or self-hosted copy with its own domain. |
+| `GOOGLE_SITE_VERIFICATION` | Token for Google Search Console's HTML-tag verification; adds `<meta name="google-site-verification">`.                                                                                                                             |
+| `NEXT_PUBLIC_SANDBOX_URL`  | Separate sandbox origin (see above).                                                                                                                                                                                                |
 
 ### Self-hosting
 
@@ -526,7 +526,7 @@ A `*.vercel.app` subdomain can't be verified through DNS, so use a
 **URL-prefix** property with the **HTML tag** method:
 
 1. In [Search Console](https://search.google.com/search-console), add a
-   URL-prefix property for `https://code-slatee.vercel.app/` and
+   URL-prefix property for `https://codetakhti.vercel.app/` and
    choose _HTML tag_. Copy only the `content` value of the tag.
 2. In Vercel, under _Project → Settings → Environment Variables_, add
    `GOOGLE_SITE_VERIFICATION` with that value for _Production_, then redeploy
