@@ -33,6 +33,7 @@ import { useCodeExecution } from "@/hooks/useCodeExecution";
 import { getCompilerClient, useCompilerState } from "@/hooks/useCompiler";
 import { useDiagnostics } from "@/hooks/useDiagnostics";
 import { useEditorSettings } from "@/hooks/useEditorSettings";
+import { useLocale } from "@/hooks/useLocale";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useDownloadStatus, useOnline } from "@/hooks/useOffline";
 import { runtimeBundle, useToolingStatus } from "@/hooks/useToolingStatus";
@@ -53,6 +54,7 @@ import {
   findExample,
   isStarterCode,
 } from "@/lib/examples";
+import { plural, t } from "@/lib/i18n";
 import { onFormatError } from "@/lib/monaco/setup";
 import { downloads } from "@/lib/offline/downloads";
 import {
@@ -153,11 +155,9 @@ function countLines(text: string): number {
   return text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
 }
 
-function plural(count: number, word: string) {
-  return `${count} ${word}${count === 1 ? "" : "s"}`;
-}
-
 export function Playground() {
+  // Re-render when the interface language changes (t reads it).
+  useLocale();
   const [settings, updateSettings] = useEditorSettings();
   const { resolvedTheme } = useTheme();
   const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -310,15 +310,15 @@ export function Playground() {
         toast.error(
           shareError instanceof ShareError
             ? shareError.message
-            : "The share link could not be opened.",
+            : t("toast.shareOpenFailed"),
           {
-            description: "Your last draft was opened instead.",
+            description: t("toast.lastDraft"),
             duration: 8_000,
           },
         );
         clearUrlDocument();
       }
-      let notice = "Loaded shared code";
+      let notice = t("toast.loadedShared");
       const exampleId = new URLSearchParams(window.location.search).get(
         EXAMPLE_PARAM,
       );
@@ -330,10 +330,10 @@ export function Playground() {
             code: example.code,
             stdin: example.stdin,
           };
-          notice = `Opened “${example.title}”`;
+          notice = t("toast.openedExample", { title: example.title });
         } else {
-          toast.error("That example does not exist.", {
-            description: "Your last draft was opened instead.",
+          toast.error(t("toast.noExample"), {
+            description: t("toast.lastDraft"),
             // Shown while the editor may still be loading, like share errors.
             duration: 8_000,
           });
@@ -366,9 +366,9 @@ export function Playground() {
           notice,
           restorable
             ? {
-                description: "Your previous draft is still available.",
+                description: t("toast.previousDraft"),
                 action: {
-                  label: "Restore draft",
+                  label: t("toast.restoreDraft"),
                   onClick: () => loadDocument(restorable),
                 },
                 duration: UNDO_TOAST_MS,
@@ -385,9 +385,13 @@ export function Playground() {
 
   useEffect(() => {
     onFormatError((error) =>
-      toast.error("Could not format the code", {
+      toast.error(t("toast.formatFailed"), {
         description: error.line
-          ? `${error.message} (line ${error.line}, column ${error.column})`
+          ? t("toast.formatPosition", {
+              message: error.message,
+              line: error.line,
+              column: error.column ?? 1,
+            })
           : error.message,
       }),
     );
@@ -451,7 +455,7 @@ export function Playground() {
       execution.report({
         status: "idle",
         level: "info",
-        message: "Nothing to run: the editor is empty.",
+        message: t("run.empty"),
         clearConsole,
       });
       return;
@@ -482,8 +486,11 @@ export function Playground() {
       setPreparing(true);
       execution.announce(
         clang.state.status === "ready"
-          ? `Compiling ${info.fileName}…`
-          : `Compiling ${info.fileName} (the compiler downloads once, about ${info.download})…`,
+          ? t("run.compiling", { file: info.fileName })
+          : t("run.compilingFirst", {
+              file: info.fileName,
+              size: info.download ?? "",
+            }),
         clearConsole,
       );
       try {
@@ -494,7 +501,10 @@ export function Playground() {
         execution.report({
           status: "failed",
           level: "error",
-          message: `Cannot compile ${info.name}: ${error instanceof Error ? error.message : String(error)}`,
+          message: t("run.cannotCompile", {
+            name: info.name,
+            message: error instanceof Error ? error.message : String(error),
+          }),
           clearConsole,
         });
         return;
@@ -510,7 +520,9 @@ export function Playground() {
         execution.report({
           status: "failed",
           level: "error",
-          message: `Compilation failed with ${plural(Math.max(errors.length, 1), "error")}. See the Problems panel.`,
+          message: t("run.compileFailed", {
+            errors: plural("count.error", Math.max(errors.length, 1)),
+          }),
           clearConsole,
         });
         setView("problems");
@@ -520,10 +532,16 @@ export function Playground() {
       notices.push({
         level: warnings.length > 0 ? "warn" : "debug",
         message:
-          `Compiled ${info.fileName} in ${seconds.toFixed(1)} s` +
-          (warnings.length > 0
-            ? ` with ${plural(warnings.length, "warning")} (see the Problems panel).`
-            : "."),
+          warnings.length > 0
+            ? t("run.compiledWarnings", {
+                file: info.fileName,
+                seconds: seconds.toFixed(1),
+                warnings: plural("count.warning", warnings.length),
+              })
+            : t("run.compiled", {
+                file: info.fileName,
+                seconds: seconds.toFixed(1),
+              }),
       });
       execution.run({
         ...common,
@@ -563,7 +581,7 @@ export function Playground() {
         execution.report({
           status: "failed",
           level: "error",
-          message: `Cannot compile TypeScript: ${message}`,
+          message: t("run.cannotCompile", { name: "TypeScript", message }),
           clearConsole,
         });
         return;
@@ -572,8 +590,7 @@ export function Playground() {
       result = { js: code, sourceMap: null, diagnostics: [] };
       notices.push({
         level: "warn",
-        message:
-          "The syntax checker is unavailable; running the code unchecked.",
+        message: t("run.checkerUnavailable"),
       });
     }
     if (token !== runToken.current) return; // Superseded by another Run, or stopped.
@@ -589,7 +606,9 @@ export function Playground() {
       execution.report({
         status: "failed",
         level: "error",
-        message: `Fix ${plural(syntaxErrors, "syntax error")} before running. See the Problems panel.`,
+        message: t("run.fixSyntax", {
+          errors: plural("count.syntaxError", syntaxErrors),
+        }),
         clearConsole,
       });
       setView("problems");
@@ -600,7 +619,9 @@ export function Playground() {
         execution.report({
           status: "failed",
           level: "error",
-          message: `Run blocked by ${plural(typeErrors.length, "type error")}. Turn off "Block Run on type errors" in Settings to run anyway.`,
+          message: t("run.blocked", {
+            errors: plural("count.typeError", typeErrors.length),
+          }),
           clearConsole,
         });
         setView("problems");
@@ -608,7 +629,9 @@ export function Playground() {
       }
       notices.push({
         level: "warn",
-        message: `Running with ${plural(typeErrors.length, "type error")}. See the Problems panel.`,
+        message: t("run.withTypeErrors", {
+          errors: plural("count.typeError", typeErrors.length),
+        }),
       });
     }
 
@@ -657,7 +680,7 @@ export function Playground() {
       execution.report({
         status: "stopped",
         level: "warn",
-        message: "Run cancelled.",
+        message: t("run.cancelled"),
         clearConsole: false,
       });
       return;
@@ -678,7 +701,10 @@ export function Playground() {
       if (!isStarterCode(previous.code) && previous.code !== replace.doc.code) {
         // Restores code *and* language; editor Undo restores the text too.
         toast(replace.notice, {
-          action: { label: "Undo", onClick: () => loadDocument(previous) },
+          action: {
+            label: t("toast.undo"),
+            onClick: () => loadDocument(previous),
+          },
           duration: UNDO_TOAST_MS,
         });
       } else if (replace.shared) {
@@ -715,9 +741,9 @@ export function Playground() {
         const shared = await decodeShareHash(window.location.hash);
         if (!shared || shared.code === codeRef.current) return;
         replaceWithConfirmation({
-          title: "Open the shared code?",
+          title: t("dialog.openShared"),
           doc: shared,
-          notice: "Loaded shared code",
+          notice: t("toast.loadedShared"),
           resetExecution: false,
           shared: true,
         });
@@ -725,7 +751,7 @@ export function Playground() {
         toast.error(
           error instanceof ShareError
             ? error.message
-            : "The share link could not be opened.",
+            : t("toast.shareOpenFailed"),
         );
         clearUrlDocument();
       }
@@ -737,9 +763,9 @@ export function Playground() {
   const handleReset = useCallback(() => {
     const lang = languageRef.current;
     replaceWithConfirmation({
-      title: "Reset the editor?",
+      title: t("dialog.reset"),
       doc: { language: lang, code: DEFAULT_EXAMPLE[lang].code },
-      notice: "Editor reset",
+      notice: t("toast.editorReset"),
       resetExecution: true,
       shared: false,
     });
@@ -748,13 +774,13 @@ export function Playground() {
   const handleExample = useCallback(
     (example: CodeExample) =>
       replaceWithConfirmation({
-        title: `Open “${example.title}”?`,
+        title: t("dialog.openExample", { title: example.title }),
         doc: {
           language: example.language,
           code: example.code,
           stdin: example.stdin,
         },
-        notice: `Opened “${example.title}”`,
+        notice: t("toast.openedExample", { title: example.title }),
         resetExecution: false,
         shared: false,
       }),
@@ -773,9 +799,7 @@ export function Playground() {
       });
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not create a share link.",
+        error instanceof Error ? error.message : t("toast.shareFailed"),
       );
       return;
     }
@@ -809,19 +833,19 @@ export function Playground() {
     try {
       await navigator.clipboard.writeText(url);
       toast.success(
-        "Share link copied to clipboard",
+        t("toast.shareCopied"),
         longNote ? { description: longNote.trim() } : undefined,
       );
     } catch {
-      toast.message("Share link ready", {
-        description: `Copy it from the address bar.${longNote}`,
+      toast.message(t("toast.shareReady"), {
+        description: `${t("toast.copyFromAddressBar")}${longNote}`,
       });
     }
   }, []);
 
   const handleSave = useCallback(() => {
     saveDraft();
-    toast.success("Saved in this browser", { duration: 1500 });
+    toast.success(t("toast.saved"), { duration: 1500 });
   }, [saveDraft]);
 
   const navigate = useCallback(
@@ -852,7 +876,7 @@ export function Playground() {
       );
       return true;
     } catch {
-      toast.error("Could not copy to the clipboard.");
+      toast.error(t("toast.copyFailed"));
       return false;
     }
   }, [execution.entries]);
@@ -901,7 +925,10 @@ export function Playground() {
             onNavigate={navigate}
             hint={
               tooling.status === "loading" && languageInfo(language).download
-                ? `${languageInfo(language).name} is downloading (about ${languageInfo(language).download}, only the first time). Then it runs right in your browser.`
+                ? t("console.downloadingHint", {
+                    name: languageInfo(language).name,
+                    size: languageInfo(language).download ?? "",
+                  })
                 : undefined
             }
             banner={
@@ -912,7 +939,7 @@ export function Playground() {
                 <DownloadPrompt
                   subject={
                     bundle === "clang"
-                      ? "The C and C++ compiler"
+                      ? t("download.compiler")
                       : languageInfo(language).name
                   }
                   size={languageInfo(language).download}
@@ -928,6 +955,7 @@ export function Playground() {
         problemsPanel={
           <ProblemsPanel
             diagnostics={diagnostics}
+            language={language}
             tooling={tooling}
             uncheckedLanguage={
               isJavaScriptLike(language) || isClangLanguage(language)
@@ -984,13 +1012,11 @@ export function Playground() {
           <AlertDialogHeader>
             <AlertDialogTitle>{pendingReplace?.title}</AlertDialogTitle>
             <AlertDialogDescription>
-              Your current code will be replaced. You can bring it back with the
-              Undo button in the notification that follows, or with Undo (Ctrl/⌘
-              + Z) in the editor.
+              {t("dialog.replaceBody")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("dialog.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 const replace = pendingReplace;
@@ -998,7 +1024,7 @@ export function Playground() {
                 if (replace) applyReplace(replace);
               }}
             >
-              Replace
+              {t("dialog.replace")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

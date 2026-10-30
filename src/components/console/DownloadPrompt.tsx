@@ -2,6 +2,8 @@
 
 import { CloudDownload, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/hooks/useLocale";
+import type { MessageKey } from "@/lib/i18n";
 
 interface Connection {
   saveData?: boolean;
@@ -10,15 +12,15 @@ interface Connection {
 }
 
 /** What the Network Information API (where available) says about the connection. */
-function connectionNote(): string | null {
+function connectionNote(): MessageKey | null {
   if (typeof navigator === "undefined") return null;
   const connection = (navigator as Navigator & { connection?: Connection })
     .connection;
   if (!connection) return null;
-  if (connection.saveData) return "Data Saver is on.";
-  if (connection.type === "cellular") return "You seem to be on mobile data.";
+  if (connection.saveData) return "download.dataSaver";
+  if (connection.type === "cellular") return "download.cellular";
   if (["slow-2g", "2g", "3g"].includes(connection.effectiveType ?? ""))
-    return "Your connection looks slow, so it may take a while.";
+    return "download.slow";
   return null;
 }
 
@@ -47,7 +49,10 @@ export function DownloadPrompt({
   onDownload,
   onCancel,
 }: DownloadPromptProps) {
-  const sizeText = size ? `a one-time ${size} download` : "a one-time download";
+  const t = useT();
+  const sizeText = size
+    ? t("download.oneTime", { size })
+    : t("download.oneTimeUnknown");
   if (!online) {
     return (
       <div
@@ -61,11 +66,10 @@ export function DownloadPrompt({
         />
         <div>
           <p className="font-medium">
-            You&apos;re offline. {subject} needs internet once.
+            {t("download.offlineTitle", { subject })}
           </p>
           <p className="mt-1 text-muted-foreground">
-            It is {sizeText}. Connect once to get it, and after that it works
-            without internet. Languages you have already used still run.
+            {t("download.offlineBody", { size: sizeText })}
           </p>
         </div>
       </div>
@@ -86,18 +90,18 @@ export function DownloadPrompt({
       />
       <div>
         <p className="font-medium">
-          {subject} needs {sizeText}.
+          {t("download.needs", { subject, size: sizeText })}
         </p>
         <p className="mt-1 text-muted-foreground">
-          {note && <>{note} </>}
-          It is saved in your browser, so after that it works without internet.
+          {note && <>{t(note)} </>}
+          {t("download.saved")}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button size="sm" className="h-9" onClick={onDownload}>
-            Download
+            {t("download.download")}
           </Button>
           <Button size="sm" variant="ghost" className="h-9" onClick={onCancel}>
-            Cancel
+            {t("download.cancel")}
           </Button>
         </div>
       </div>

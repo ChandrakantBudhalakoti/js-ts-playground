@@ -14,6 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/hooks/useLocale";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { cn } from "@/lib/utils";
 
@@ -86,6 +87,7 @@ function ConsoleActions({
   onCopy: () => Promise<boolean>;
   disabled: boolean;
 }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex items-center gap-0.5">
@@ -94,7 +96,7 @@ function ConsoleActions({
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="Copy output"
+            aria-label={t("panel.copyOutput")}
             disabled={disabled}
             onClick={async () => {
               if (await onCopy()) {
@@ -106,21 +108,23 @@ function ConsoleActions({
             {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>{copied ? "Copied" : "Copy output"}</TooltipContent>
+        <TooltipContent>
+          {copied ? t("panel.copied") : t("panel.copyOutput")}
+        </TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="Clear console"
+            aria-label={t("panel.clearConsole")}
             disabled={disabled}
             onClick={onClear}
           >
             <Trash2 aria-hidden />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Clear console</TooltipContent>
+        <TooltipContent>{t("panel.clearConsole")}</TooltipContent>
       </Tooltip>
     </div>
   );
@@ -131,6 +135,7 @@ const TRIGGER =
 
 export function PlaygroundLayout(props: PlaygroundLayoutProps) {
   const { isDesktop, onViewChange } = props;
+  const t = useT();
   // Touch screens: stay inside the visible area when the keyboard is open.
   const visible = useVisualViewport();
   const rootStyle: CSSProperties | undefined = visible
@@ -155,17 +160,17 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
 
   const consoleTrigger = (
     <TabsTrigger value="console" className={TRIGGER}>
-      Console <CountBadge count={props.consoleCount} />
+      {t("panel.console")} <CountBadge count={props.consoleCount} />
     </TabsTrigger>
   );
   const problemsTrigger = (
     <TabsTrigger value="problems" className={TRIGGER}>
-      Problems <ProblemsBadge counts={props.problemCounts} />
+      {t("panel.problems")} <ProblemsBadge counts={props.problemCounts} />
     </TabsTrigger>
   );
   const inputTrigger = hasInput && (
     <TabsTrigger value="input" className={TRIGGER}>
-      Input <CountBadge count={props.inputLines} />
+      {t("panel.input")} <CountBadge count={props.inputLines} />
     </TabsTrigger>
   );
 
@@ -192,11 +197,11 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
         {props.toolbar}
         <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
           <ResizablePanel id="editor" defaultSize="64%" minSize="20%">
-            <main className="h-full" aria-label="Editor">
+            <main className="h-full" aria-label={t("panel.editor")}>
               {props.editor}
             </main>
           </ResizablePanel>
-          <ResizableHandle withHandle aria-label="Resize output panel" />
+          <ResizableHandle withHandle aria-label={t("panel.resize")} />
           <ResizablePanel id="output" defaultSize="36%" minSize="12%">
             <Tabs
               value={bottomView}
@@ -246,7 +251,7 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
             className="h-9 min-w-0 overflow-x-auto pointer-coarse:h-11"
           >
             <TabsTrigger value="code" className={TRIGGER}>
-              Code
+              {t("panel.code")}
             </TabsTrigger>
             {consoleTrigger}
             {problemsTrigger}
@@ -260,7 +265,7 @@ export function PlaygroundLayout(props: PlaygroundLayoutProps) {
             value="code"
             forceMount
             className="absolute inset-0 data-[state=inactive]:invisible"
-            aria-label="Editor"
+            aria-label={t("panel.editor")}
           >
             {props.editor}
           </TabsContent>

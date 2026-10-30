@@ -3,6 +3,7 @@
 import { Trash2 } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/hooks/useLocale";
 import { useDownloadStatus } from "@/hooks/useOffline";
 import { DOWNLOADS, downloads } from "@/lib/offline/downloads";
 import type { AssetBundleId } from "@/lib/runtime/assets";
@@ -14,6 +15,7 @@ function formatBytes(bytes: number): string {
 }
 
 function DownloadRow({ id, name }: { id: AssetBundleId; name: string }) {
+  const t = useT();
   const status = useDownloadStatus(id);
   const [size, setSize] = useState<number | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -45,14 +47,14 @@ function DownloadRow({ id, name }: { id: AssetBundleId; name: string }) {
         size="sm"
         className="h-8 text-xs text-muted-foreground"
         disabled={removing}
-        aria-label={`Remove ${name}`}
+        aria-label={t("settings.removeName", { name })}
         onClick={() => {
           setRemoving(true);
           void downloads.remove(id).finally(() => setRemoving(false));
         }}
       >
         <Trash2 aria-hidden />
-        Remove
+        {t("settings.remove")}
       </Button>
     </li>
   );
@@ -67,6 +69,7 @@ const noneSaved = () =>
   DOWNLOADS.every(({ id }) => downloads.status(id) !== "downloaded");
 
 export function DownloadedLanguages() {
+  const t = useT();
   const none = useSyncExternalStore(subscribe, noneSaved, () => true);
   return (
     <div data-testid="downloaded-languages">
@@ -77,8 +80,7 @@ export function DownloadedLanguages() {
       </ul>
       {none && (
         <p className="text-xs text-muted-foreground">
-          None yet. Each language is saved the first time you run it, and then
-          works offline.
+          {t("settings.downloadsNone")}
         </p>
       )}
     </div>

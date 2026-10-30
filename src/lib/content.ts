@@ -34,6 +34,11 @@ export const HOME_FAQS: Faq[] = [
       "Yes. It is free to use, needs no account, and the source code is open under the MIT license.",
   },
   {
+    question: "Is it available in Hindi?",
+    answer:
+      "Yes. The playground can be used in English, Hindi or Hinglish (Hindi in Latin letters): pick one from the language button in the editor's toolbar or in Settings. When a program fails, a short explanation of common errors appears under the real error message in the language you chose. Your code and its output are never translated.",
+  },
+  {
     question: "Does it work offline?",
     answer:
       "Yes, once you have used it. The playground and every language you have run are saved in your browser, so they keep working without internet. Before a language is downloaded the first time, you see its size and choose (handy on mobile data), and Settings lists the saved languages so you can remove one to free space.",

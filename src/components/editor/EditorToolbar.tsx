@@ -19,6 +19,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -28,6 +30,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { GitHubIcon } from "@/components/site/GitHubIcon";
+import { useT } from "@/hooks/useLocale";
 import { useOnline } from "@/hooks/useOffline";
 import type { ToolingStatus } from "@/hooks/useToolingStatus";
 import { REPO_URL, SITE_NAME } from "@/lib/site";
@@ -39,6 +42,10 @@ import type {
 } from "@/types/playground";
 import { ExamplesMenu } from "./ExamplesMenu";
 import { ExecutionStatusBadge } from "./ExecutionStatusBadge";
+import {
+  InterfaceLanguageItems,
+  InterfaceLanguageMenu,
+} from "./InterfaceLanguage";
 import { LanguageSelector } from "./LanguageSelector";
 import { SettingsPopover } from "./SettingsPopover";
 
@@ -99,6 +106,7 @@ function ToolingIndicator({ state }: { state: ToolingStatus }) {
 }
 
 function ToolingIndicatorContent({ state }: { state: ToolingStatus }) {
+  const t = useT();
   if (state.status === "ready") {
     return (
       <span className="hidden text-xs text-muted-foreground lg:inline">
@@ -110,10 +118,10 @@ function ToolingIndicatorContent({ state }: { state: ToolingStatus }) {
     return (
       <span
         className="flex items-center gap-1 text-xs text-muted-foreground"
-        title={`${state.label} is not downloaded yet`}
+        title={t("toolbar.notDownloadedTitle", { name: state.label })}
       >
         <CloudDownload className="size-3.5" aria-hidden />
-        <span className="hidden lg:inline">Not downloaded</span>
+        <span className="hidden lg:inline">{t("toolbar.notDownloaded")}</span>
       </span>
     );
   }
@@ -123,10 +131,12 @@ function ToolingIndicatorContent({ state }: { state: ToolingStatus }) {
     return (
       <span
         className="flex items-center gap-1 text-xs text-muted-foreground"
-        title={`Downloading ${state.label}`}
+        title={t("toolbar.downloading", { name: state.label })}
       >
         <Loader2 className="size-3 animate-spin" aria-hidden />
-        <span className="hidden lg:inline">Loading {state.label}…</span>
+        <span className="hidden lg:inline">
+          {t("toolbar.loading", { name: state.label })}
+        </span>
         {percent !== null && <span className="tabular-nums">{percent}%</span>}
       </span>
     );
@@ -149,26 +159,28 @@ function ToolingIndicatorContent({ state }: { state: ToolingStatus }) {
 
 /** Shown while the browser has no connection; saved languages still run. */
 function OfflineIndicator() {
+  const t = useT();
   const online = useOnline();
   if (online) return null;
   return (
     <span
       role="status"
       data-testid="offline-indicator"
-      title="You're offline. Languages you have used before still work."
+      title={t("toolbar.offlineTitle")}
       className="flex items-center gap-1 rounded-full border border-amber-600/40 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400"
     >
       <WifiOff className="size-3.5" aria-hidden />
-      <span className="sr-only sm:not-sr-only">Offline</span>
+      <span className="sr-only sm:not-sr-only">{t("toolbar.offline")}</span>
     </span>
   );
 }
 
 export function EditorToolbar(props: EditorToolbarProps) {
   const { busy, onRun, onStop, onFormat, canFormat, onReset, onShare } = props;
+  const t = useT();
   const formatLabel = canFormat
-    ? "Format"
-    : "Format (JavaScript and TypeScript only)";
+    ? t("toolbar.format")
+    : t("toolbar.formatJsOnly");
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-1.5 border-b bg-background px-2 sm:gap-2 sm:px-3">
@@ -205,11 +217,11 @@ export function EditorToolbar(props: EditorToolbarProps) {
             size="sm"
             variant="destructive"
             onClick={onStop}
-            aria-label="Stop"
+            aria-label={t("toolbar.stop")}
             data-testid="stop-button"
           >
             <Square className="fill-current" aria-hidden />
-            Stop
+            {t("toolbar.stop")}
           </Button>
         ) : (
           <Tooltip>
@@ -217,16 +229,17 @@ export function EditorToolbar(props: EditorToolbarProps) {
               <Button
                 size="sm"
                 onClick={onRun}
-                aria-label="Run"
+                aria-label={t("toolbar.run")}
                 data-testid="run-button"
                 className="bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-800"
               >
                 <Play className="fill-current" aria-hidden />
-                Run
+                {t("toolbar.run")}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              Run <span className="ml-1.5 opacity-70">Ctrl/⌘ + Enter</span>
+              {t("toolbar.runTooltip")}{" "}
+              <span className="ml-1.5 opacity-70">Ctrl/⌘ + Enter</span>
             </TooltipContent>
           </Tooltip>
         )}
@@ -240,10 +253,10 @@ export function EditorToolbar(props: EditorToolbarProps) {
           >
             <WandSparkles aria-hidden />
           </IconAction>
-          <IconAction label="Reset" onClick={onReset}>
+          <IconAction label={t("toolbar.reset")} onClick={onReset}>
             <RotateCcw aria-hidden />
           </IconAction>
-          <IconAction label="Share" onClick={onShare}>
+          <IconAction label={t("toolbar.share")} onClick={onShare}>
             <Share2 aria-hidden />
           </IconAction>
         </div>
@@ -253,7 +266,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="More actions"
+              aria-label={t("toolbar.moreActions")}
               className="sm:hidden"
             >
               <Ellipsis aria-hidden />
@@ -261,17 +274,25 @@ export function EditorToolbar(props: EditorToolbarProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={onFormat} disabled={!canFormat}>
-              <WandSparkles aria-hidden /> Format
+              <WandSparkles aria-hidden /> {t("toolbar.format")}
               <DropdownMenuShortcut>⇧⌥F</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={onReset}>
-              <RotateCcw aria-hidden /> Reset
+              <RotateCcw aria-hidden /> {t("toolbar.reset")}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={onShare}>
-              <Share2 aria-hidden /> Share
+              <Share2 aria-hidden /> {t("toolbar.share")}
             </DropdownMenuItem>
+            {/* Phones: the interface language lives here (no room in the bar). */}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              {t("toolbar.interfaceLanguage")}
+            </DropdownMenuLabel>
+            <InterfaceLanguageItems />
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <InterfaceLanguageMenu className="hidden sm:inline-flex" />
 
         <SettingsPopover
           settings={props.settings}
@@ -286,12 +307,12 @@ export function EditorToolbar(props: EditorToolbarProps) {
               size="icon-sm"
               className="hidden md:inline-flex"
             >
-              <a href={REPO_URL} aria-label="Source code on GitHub">
+              <a href={REPO_URL} aria-label={t("toolbar.source")}>
                 <GitHubIcon className="size-4" />
               </a>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Source code on GitHub</TooltipContent>
+          <TooltipContent>{t("toolbar.source")}</TooltipContent>
         </Tooltip>
       </div>
     </header>

@@ -129,6 +129,26 @@ test.describe("errors in other languages", () => {
     await expect(page.getByTestId("problem-item").first()).toContainText(
       "main.c:2:",
     );
+    // A plain-language explanation under it (src/lib/friendly-errors).
+    await expect(
+      page.getByTestId("problems-list").getByTestId("friendly-error").first(),
+    ).toContainText("A semicolon (;) is missing");
+  });
+
+  test("a Python indentation error is explained in plain language", async ({
+    page,
+  }) => {
+    await openPlayground(page, {
+      language: "python",
+      code: "count = 3\n    print(count)\n",
+    });
+    await run(page);
+    await expectStatus(page, "failed", STATUS_TIMEOUT);
+    const error = consoleOutput(page).locator('[data-kind="runtime-error"]');
+    await expect(error).toContainText("IndentationError");
+    await expect(error.getByTestId("friendly-error")).toContainText(
+      "Line 2 has extra spaces at the start",
+    );
   });
 
   test("a C program's exit status fails the run", async ({ page }) => {

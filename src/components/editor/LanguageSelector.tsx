@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/hooks/useLocale";
 import {
   isLanguage,
   LANGUAGE_GROUPS,
@@ -23,6 +24,7 @@ interface LanguageSelectorProps {
 }
 
 export function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
+  const t = useT();
   const current = languageInfo(value);
   return (
     <Select
@@ -33,7 +35,7 @@ export function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
     >
       <SelectTrigger
         size="sm"
-        aria-label={`Language: ${current.name}`}
+        aria-label={t("language.label", { name: current.name })}
         data-testid="language-select"
         className="gap-1 px-2 text-xs font-medium"
       >

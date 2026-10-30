@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useT } from "@/hooks/useLocale";
 import { EXAMPLES, findExample, isProgramExample } from "@/lib/examples";
 import { isJavaScriptLike, LANGUAGES, languageInfo } from "@/lib/languages";
 import {
@@ -63,6 +64,7 @@ function ExampleGroup({
   onSelect: (example: CodeExample) => void;
   onBrowsePrograms: (language: Language) => void;
 }) {
+  const t = useT();
   const programs = programsIn(language);
   return (
     <DropdownMenuGroup>
@@ -83,7 +85,7 @@ function ExampleGroup({
           }}
         >
           <GraduationCap aria-hidden />
-          Beginner programs ({programs.length})
+          {t("examples.beginnerPrograms", { count: programs.length })}
           <ChevronRight className="ml-auto opacity-60" aria-hidden />
         </DropdownMenuItem>
       )}
@@ -140,6 +142,7 @@ export function ExamplesMenu({ language, onSelect }: ExamplesMenuProps) {
   const [browsing, setBrowsing] = useState<Language | null>(null);
   /** The language whose beginner programs are listed, if any. */
   const [programs, setPrograms] = useState<Language | null>(null);
+  const t = useT();
 
   return (
     <DropdownMenu
@@ -150,9 +153,9 @@ export function ExamplesMenu({ language, onSelect }: ExamplesMenuProps) {
       }}
     >
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" aria-label="Examples">
+        <Button variant="ghost" size="sm" aria-label={t("examples.button")}>
           <BookOpen aria-hidden />
-          <span className="hidden sm:inline">Examples</span>
+          <span className="hidden sm:inline">{t("examples.button")}</span>
           <ChevronDown className="hidden opacity-60 sm:inline" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
@@ -171,11 +174,11 @@ export function ExamplesMenu({ language, onSelect }: ExamplesMenuProps) {
               className="text-muted-foreground"
             >
               <ChevronLeft aria-hidden />
-              {languageInfo(programs).name} examples
+              {t("examples.ofLanguage", { name: languageInfo(programs).name })}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuLabel>
-              {languageInfo(programs).name} programs for beginners
+              {t("examples.programsFor", { name: languageInfo(programs).name })}
             </DropdownMenuLabel>
             <ProgramGroups language={programs} onSelect={onSelect} />
           </>
@@ -189,7 +192,7 @@ export function ExamplesMenu({ language, onSelect }: ExamplesMenuProps) {
               className="text-muted-foreground"
             >
               <ChevronLeft aria-hidden />
-              All languages
+              {t("examples.allLanguages")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <ExampleGroup
@@ -210,7 +213,7 @@ export function ExamplesMenu({ language, onSelect }: ExamplesMenuProps) {
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Other languages
+              {t("examples.otherLanguages")}
             </DropdownMenuLabel>
             {others.map((info) => (
               <DropdownMenuItem
@@ -220,7 +223,7 @@ export function ExamplesMenu({ language, onSelect }: ExamplesMenuProps) {
                   event.preventDefault();
                   setBrowsing(info.id);
                 }}
-                aria-label={`${info.name} examples`}
+                aria-label={t("examples.ofLanguage", { name: info.name })}
               >
                 {info.name}
                 <ChevronRight className="ml-auto opacity-60" aria-hidden />

@@ -74,6 +74,20 @@ address `SITE_URL`, both in `src/lib/site.ts`.
   downloaded twice. Settings → Downloaded languages lists what is saved, with
   sizes, and removes a language to free space. An Offline badge shows when
   there is no connection.
+- **Hindi and Hinglish:** the playground's interface is in English, Hindi
+  (हिन्दी) or Hinglish (Hindi in Latin script), from the language button in the
+  toolbar (the ⋯ menu on phones) or Settings. The choice is remembered, and a
+  browser set to Hindi starts in Hindi. Code and program output are never
+  translated; the site's articles stay in English.
+- **Friendly error explanations:** under the most common beginner errors
+  (Python indentation, missing colons, NameError, adding text and numbers,
+  `int(input())` on text, index errors, division by zero, empty input; C and
+  C++ missing semicolons, undeclared names, missing `#include`, `scanf`
+  without `&`, missing return types, arrays out of bounds, `cin` misuse;
+  timeouts in every language), a short explanation in plain English, Hindi or
+  Hinglish, with a link to the line. The original error always stays visible.
+  The rules are data (`src/lib/friendly-errors/rules.ts`), and Java's are
+  ready for when Java runs.
 - **Sharing and drafts:** share links keep the code (and the input)
   compressed in the URL hash (no server storage), and your draft is saved in
   the browser.

@@ -107,6 +107,12 @@ export interface ConsoleEntry {
   uncaught?: false;
   /** Visual tone for system entries. */
   tone?: "success";
+  /**
+   * For a system entry, the text a friendly explanation is matched against
+   * (src/lib/friendly-errors), which stays English when the entry is shown
+   * in another language.
+   */
+  explain?: string;
 }
 
 export interface RuntimeErrorInfo {

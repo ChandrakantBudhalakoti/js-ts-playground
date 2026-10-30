@@ -6,7 +6,14 @@ import type {
   ConsoleEntry as ConsoleEntryData,
   SourceLocation,
 } from "@/types/playground";
+import { useT } from "@/hooks/useLocale";
 import { ConsoleEntry } from "./ConsoleEntry";
+
+/** A message with `{run}` (or `{keys}`) replaced by an element. */
+function withRun(text: string, element: ReactNode): ReactNode[] {
+  const [before, after] = text.split(/\{(?:run|keys)\}/);
+  return after === undefined ? [text] : [before, element, after];
+}
 
 interface ConsolePanelProps {
   entries: ConsoleEntryData[];
@@ -28,6 +35,7 @@ export function ConsolePanel({
   hint,
   banner,
 }: ConsolePanelProps) {
+  const t = useT();
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
 
@@ -49,15 +57,23 @@ export function ConsolePanel({
             </p>
           )}
           <p>
-            Press <span className="font-medium text-foreground">Run</span> to
-            see your code&apos;s output here.
+            {withRun(
+              t("console.empty"),
+              <span key="run" className="font-medium text-foreground">
+                {t("toolbar.run")}
+              </span>,
+            )}
           </p>
           <p className="text-xs pointer-coarse:hidden">
-            Or press{" "}
-            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
-              Ctrl/⌘ + Enter
-            </kbd>{" "}
-            in the editor.
+            {withRun(
+              t("console.shortcut"),
+              <kbd
+                key="keys"
+                className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground"
+              >
+                Ctrl/⌘ + Enter
+              </kbd>,
+            )}
           </p>
         </div>
       </div>
@@ -70,7 +86,7 @@ export function ConsolePanel({
       <div
         ref={scrollRef}
         role="log"
-        aria-label="Console output"
+        aria-label={t("console.output")}
         data-testid="console-output"
         onScroll={(event) => {
           const element = event.currentTarget;

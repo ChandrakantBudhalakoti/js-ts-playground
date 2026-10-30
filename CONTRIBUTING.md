@@ -57,6 +57,8 @@ formatting.
 | Website pages (home, guides, …)    | `src/app/(site)`, `src/components/site`                                         |
 | Beginner programs (all languages)  | `src/lib/programs` (one file per program in `topics/`)                          |
 | Offline use and download prompts   | `src/lib/offline` (service worker, saved runtimes), `src/app/sw.js/route.ts`    |
+| Interface text and translations    | `src/lib/i18n` (English, Hindi, Hinglish)                                       |
+| Friendly error explanations        | `src/lib/friendly-errors/rules.ts`                                              |
 | Page titles, descriptions, sitemap | `src/lib/metadata.ts`, `src/lib/site.ts`, `src/app/sitemap.ts`                  |
 
 The README's [Architecture](README.md#architecture) section explains how the
@@ -112,6 +114,41 @@ generated from the data.
 
 A new language for the library goes in `PROGRAM_LANGUAGES` in
 `src/lib/programs/types.ts`; its pages appear once the playground can run it.
+
+## Adding a friendly error explanation
+
+When a run fails, the console (and the Problems panel, for C and C++) shows a
+short plain-language explanation under common errors, in the interface
+language. The original error always stays visible: reading real errors is
+part of learning to program.
+
+The rules are in `src/lib/friendly-errors/rules.ts`. Each has:
+
+- `id`: unique, in kebab-case;
+- `languages`: the languages whose errors it explains (`"java"` is allowed),
+  or `"any"`;
+- `pattern`: a regular expression tested against the error as
+  `"<Name>: <message>"` (for example `NameError: name 'x' is not defined`),
+  or a compiler's message as it is (`expected ';' at end of declaration`);
+- `text`: the explanation in English (`en`), Hindi (`hi`) and Hinglish
+  (`hinglish`). `{line}` becomes the error's line number and `{1}`, `{2}`, …
+  the pattern's groups. Keep code (`int()`, `#include <stdio.h>`, `&`) exactly
+  as it is in every language.
+
+Rules are tried in order and the first match wins, so put a specific rule
+before a general one. Copy the error message from a real run (the browser
+tests and `npx tsx scripts/check-programs.mts` are handy for that), then add
+a case to `tests/unit/friendly-errors.test.ts`.
+
+## Translating the interface
+
+The interface (not the code, program output or the site's articles) is in
+English, Hindi and Hinglish. The text is in `src/lib/i18n/messages/`:
+`en.ts` is the source, and `hi.ts` and `hinglish.ts` must have exactly the
+same keys and `{placeholders}` (a unit test checks). To add a language,
+add it to `LOCALES` in `src/lib/i18n/locales.ts`, add a messages file and
+its loader in `src/lib/i18n/index.ts`, and add its text to every rule in
+`src/lib/friendly-errors/rules.ts`.
 
 ## Rules for the sandbox
 
