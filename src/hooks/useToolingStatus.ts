@@ -1,6 +1,7 @@
 "use client";
 
 import { useClangState } from "@/hooks/useClang";
+import { useDownloadStatus } from "@/hooks/useOffline";
 import { useDownloadState } from "@/hooks/useRuntimeAssets";
 import type { CompilerState } from "@/lib/compiler/compiler-client";
 import {
@@ -20,6 +21,8 @@ export type ToolingStatus =
       progress: number | null;
     }
   | { status: "ready"; label: string }
+  /** Not downloaded yet: waiting for the user to agree (DownloadPrompt). */
+  | { status: "download"; label: string }
   | { status: "error"; label: string; message: string };
 
 export function runtimeBundle(language: Language): AssetBundleId | null {
@@ -41,7 +44,10 @@ export function useToolingStatus(
   const download = useDownloadState(
     bundle === null || bundle === "clang" ? null : bundle,
   );
+  const permission = useDownloadStatus(bundle);
   const info = languageInfo(language);
+
+  if (permission === "ask") return { status: "download", label: info.name };
 
   if (isJavaScriptLike(language)) {
     if (compilerState.status === "ready")

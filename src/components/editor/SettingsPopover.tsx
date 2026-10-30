@@ -25,6 +25,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { DownloadedLanguages } from "@/components/editor/DownloadedLanguages";
 import { FONT_SIZES, TIMEOUTS } from "@/hooks/useEditorSettings";
 import type { EditorSettings } from "@/types/playground";
 
@@ -93,7 +94,11 @@ export function SettingsPopover({ settings, onChange }: SettingsPopoverProps) {
         </TooltipTrigger>
         <TooltipContent>Settings</TooltipContent>
       </Tooltip>
-      <PopoverContent align="end" className="w-80 p-4">
+      <PopoverContent
+        align="end"
+        collisionPadding={8}
+        className="max-h-(--radix-popover-content-available-height) w-80 overflow-y-auto p-4"
+      >
         <div className="flex flex-col gap-2">
           <h2 className="text-sm font-medium">Editor</h2>
           <Row label="Theme">
@@ -199,6 +204,17 @@ export function SettingsPopover({ settings, onChange }: SettingsPopoverProps) {
               onChange({ clearConsoleOnRun })
             }
           />
+
+          <Separator className="my-2" />
+          <h2 className="text-sm font-medium">Downloaded languages</h2>
+          <SwitchRow
+            label="Ask before downloading"
+            checked={settings.askBeforeDownload}
+            onCheckedChange={(askBeforeDownload) =>
+              onChange({ askBeforeDownload })
+            }
+          />
+          <DownloadedLanguages />
 
           <Separator className="my-2" />
           <h2 className="text-sm font-medium">Shortcuts</h2>

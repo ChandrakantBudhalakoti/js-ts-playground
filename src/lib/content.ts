@@ -34,6 +34,11 @@ export const HOME_FAQS: Faq[] = [
       "Yes. It is free to use, needs no account, and the source code is open under the MIT license.",
   },
   {
+    question: "Does it work offline?",
+    answer:
+      "Yes, once you have used it. The playground and every language you have run are saved in your browser, so they keep working without internet. Before a language is downloaded the first time, you see its size and choose (handy on mobile data), and Settings lists the saved languages so you can remove one to free space.",
+  },
+  {
     question: "Does it work on a phone or tablet?",
     answer:
       "Yes, it is designed for them. The editor, the output and the input each get the full screen, buttons are big enough to tap, and a row of code keys gives you brackets, symbols, Tab and the arrow keys. A recent version of Chrome, Edge or Firefox is all you need, and you can add it to your home screen like an app.",

@@ -95,7 +95,7 @@ const LIMITATIONS = [
   "There are no package managers: each language comes with its standard library, but npm, pip, Go modules and gems can't be installed.",
   "Programs can't open files or use the network.",
   "C++ exceptions are not supported: a throw ends the program with its message.",
-  "The first run of Python, C, C++, Go, Ruby, PHP, Lua or R downloads its runtime once (0.2 to 27 MB).",
+  "The first run of Python, C, C++, Go, Ruby, PHP, Lua or R downloads its runtime once (0.2 to 27 MB): the size is shown first, and you choose. After that it works offline.",
   "Each run has a time limit, 5 seconds by default and up to 30 seconds.",
 ];
 

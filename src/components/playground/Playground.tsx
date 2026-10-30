@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { ConsolePanel } from "@/components/console/ConsolePanel";
+import { DownloadPrompt } from "@/components/console/DownloadPrompt";
 import { ProblemsPanel } from "@/components/diagnostics/ProblemsPanel";
 import type { CodeEditorHandle, CodeKey } from "@/components/editor/CodeEditor";
 import { CodeKeys } from "@/components/editor/CodeKeys";
@@ -33,7 +34,8 @@ import { getCompilerClient, useCompilerState } from "@/hooks/useCompiler";
 import { useDiagnostics } from "@/hooks/useDiagnostics";
 import { useEditorSettings } from "@/hooks/useEditorSettings";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { useToolingStatus } from "@/hooks/useToolingStatus";
+import { useDownloadStatus, useOnline } from "@/hooks/useOffline";
+import { runtimeBundle, useToolingStatus } from "@/hooks/useToolingStatus";
 import type { ClangResult } from "@/lib/clang/protocol";
 import { countBySeverity, hasBlockingErrors } from "@/lib/compiler/diagnostics";
 import { FILE_NAMES } from "@/lib/compiler/options";
@@ -52,6 +54,7 @@ import {
   isStarterCode,
 } from "@/lib/examples";
 import { onFormatError } from "@/lib/monaco/setup";
+import { downloads } from "@/lib/offline/downloads";
 import {
   decodeShareHash,
   encodeShareHash,
@@ -82,7 +85,11 @@ const CodeEditor = dynamic(() => import("@/components/editor/CodeEditor"), {
   loading: EditorPlaceholder,
 });
 
-const SANDBOX_URL = process.env.NEXT_PUBLIC_SANDBOX_URL || "/sandbox";
+/**
+ * The sandbox page, versioned by build so the browser can keep it in its
+ * cache: runs then work offline (src/app/sandbox/route.ts).
+ */
+const SANDBOX_URL = `${process.env.NEXT_PUBLIC_SANDBOX_URL || "/sandbox"}?v=${process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}`;
 const DRAFT_SAVE_DELAY_MS = 400;
 /** Links longer than this may be truncated by chat apps and some browsers. */
 const LONG_URL_WARNING = 8_000;
@@ -169,6 +176,13 @@ export function Playground() {
   // Only once the document is known: the initial language is a placeholder.
   const compilerState = useCompilerState(loaded && isJavaScriptLike(language));
   const tooling = useToolingStatus(language, compilerState);
+  const bundle = runtimeBundle(language);
+  const download = useDownloadStatus(bundle);
+  const downloadAllowed =
+    bundle === null || download === "allowed" || download === "downloaded";
+  const online = useOnline();
+  /** The download prompt was dismissed; it comes back on the next Run. */
+  const [promptDismissed, setPromptDismissed] = useState(false);
   // "code" shows the editor on phones; on desktop the bottom panel treats it as "console".
   const [view, setView] = useState<PanelView>("code");
   const [preparing, setPreparing] = useState(false);
@@ -211,11 +225,27 @@ export function Playground() {
   /** Start downloading what a language needs, so its first run is quick. */
   const prepareLanguage = useCallback(
     (next: Language) => {
+      // Never download a runtime the user has not agreed to (DownloadPrompt).
+      const needed = runtimeBundle(next);
+      if (needed && !downloads.isAllowed(needed)) return;
       if (isClangLanguage(next)) getClangClient().start();
       prepareRuntime(languageInfo(next).runtime);
     },
     [prepareRuntime],
   );
+
+  useEffect(
+    () => downloads.setAskFirst(settings.askBeforeDownload),
+    [settings.askBeforeDownload],
+  );
+
+  // Once a language may be downloaded (or turns out to be saved already),
+  // prepare it, and check C/C++ code that could not be checked until now.
+  useEffect(() => {
+    if (!loaded || !downloadAllowed) return;
+    prepareLanguage(language);
+    if (isClangLanguage(language)) scheduleCheck(codeRef.current, language, 0);
+  }, [loaded, downloadAllowed, language, prepareLanguage, scheduleCheck]);
 
   const scheduleSave = useCallback(() => {
     savePending.current = true;
@@ -390,6 +420,7 @@ export function Playground() {
       }
       languageRef.current = next;
       setLanguage(next);
+      setPromptDismissed(false);
       clearDiagnostics();
       scheduleCheck(codeRef.current, next, 0);
       prepareLanguage(next);
@@ -423,6 +454,14 @@ export function Playground() {
         message: "Nothing to run: the editor is empty.",
         clearConsole,
       });
+      return;
+    }
+
+    // A language's first download waits for the user to agree; the prompt
+    // in the console asks (or explains, offline, that it needs internet).
+    const needed = runtimeBundle(lang);
+    if (needed && !downloads.isAllowed(needed)) {
+      setPromptDismissed(false);
       return;
     }
 
@@ -864,6 +903,25 @@ export function Playground() {
               tooling.status === "loading" && languageInfo(language).download
                 ? `${languageInfo(language).name} is downloading (about ${languageInfo(language).download}, only the first time). Then it runs right in your browser.`
                 : undefined
+            }
+            banner={
+              bundle &&
+              download !== "downloaded" &&
+              download !== "checking" &&
+              (!online || (!downloadAllowed && !promptDismissed)) ? (
+                <DownloadPrompt
+                  subject={
+                    bundle === "clang"
+                      ? "The C and C++ compiler"
+                      : languageInfo(language).name
+                  }
+                  size={languageInfo(language).download}
+                  online={online}
+                  allowed={downloadAllowed}
+                  onDownload={() => downloads.allow(bundle)}
+                  onCancel={() => setPromptDismissed(true)}
+                />
+              ) : null
             }
           />
         }

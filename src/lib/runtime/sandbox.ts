@@ -282,7 +282,11 @@ export class SandboxRuntime {
       if (sandbox.phase !== "loading") return;
       this.fail(
         sandbox,
-        "The sandbox did not start. Check the sandbox URL and its Content Security Policy.",
+        // The page the code runs in is kept by the browser's cache, which
+        // can be cleared; it is then needed from the network once more.
+        navigator.onLine
+          ? "The sandbox did not start. Check the sandbox URL and its Content Security Policy."
+          : "Code can't run offline right now: the page it runs in is no longer saved in this browser. Connect to the internet once and run again.",
       );
     }, this.options.loadTimeoutMs);
 

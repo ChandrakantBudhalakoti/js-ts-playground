@@ -181,6 +181,8 @@ export interface EditorSettings {
   timeoutMs: number;
   blockRunOnTypeErrors: boolean;
   clearConsoleOnRun: boolean;
+  /** Ask before a language's first download (its size, on mobile data). */
+  askBeforeDownload: boolean;
 }
 
 export interface CodeExample {

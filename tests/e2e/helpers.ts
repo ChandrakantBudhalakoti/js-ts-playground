@@ -11,6 +11,8 @@ interface OpenOptions {
   hash?: string;
   /** Query string without the `?`, e.g. `example=ts-generics`. */
   query?: string;
+  /** Wait until the language's tooling is ready (default true). */
+  ready?: boolean;
 }
 
 /** Wait until the editor is mounted and the type checker is ready. */
@@ -34,11 +36,15 @@ export async function openPlayground(page: Page, options: OpenOptions = {}) {
           "jsts-playground:draft",
           JSON.stringify(draft),
         );
-      if (settings)
-        window.localStorage.setItem(
-          "jsts-playground:settings",
-          JSON.stringify(settings),
-        );
+      // Merged into what is stored, so settings changed in a test survive
+      // a reload. Languages download without asking first unless a test
+      // asks for the prompt.
+      const key = "jsts-playground:settings";
+      const stored = JSON.parse(window.localStorage.getItem(key) ?? "{}");
+      window.localStorage.setItem(
+        key,
+        JSON.stringify({ askBeforeDownload: false, ...stored, ...settings }),
+      );
     },
     {
       draft:
@@ -49,13 +55,19 @@ export async function openPlayground(page: Page, options: OpenOptions = {}) {
               ...(options.stdin ? { stdin: options.stdin } : {}),
             }
           : null,
-      settings: options.settings ? { ...options.settings } : null,
+      settings: options.settings ?? {},
     },
   );
   const query = options.query ? `?${options.query}` : "";
   const hash = options.hash ? `#${options.hash}` : "";
   await page.goto(`/playground${query}${hash}`);
-  await waitForPlayground(page);
+  if (options.ready === false) {
+    await expect(page.locator(".monaco-editor").first()).toBeVisible({
+      timeout: 45_000,
+    });
+  } else {
+    await waitForPlayground(page);
+  }
 }
 
 /** The language picker is labelled "Language: <name>". */

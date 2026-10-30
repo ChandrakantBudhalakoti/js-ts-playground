@@ -3,6 +3,7 @@
 import {
   Braces,
   CircleAlert,
+  CloudDownload,
   Ellipsis,
   Loader2,
   Play,
@@ -10,6 +11,7 @@ import {
   Share2,
   Square,
   WandSparkles,
+  WifiOff,
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { GitHubIcon } from "@/components/site/GitHubIcon";
+import { useOnline } from "@/hooks/useOffline";
 import type { ToolingStatus } from "@/hooks/useToolingStatus";
 import { REPO_URL, SITE_NAME } from "@/lib/site";
 import type {
@@ -103,6 +106,17 @@ function ToolingIndicatorContent({ state }: { state: ToolingStatus }) {
       </span>
     );
   }
+  if (state.status === "download") {
+    return (
+      <span
+        className="flex items-center gap-1 text-xs text-muted-foreground"
+        title={`${state.label} is not downloaded yet`}
+      >
+        <CloudDownload className="size-3.5" aria-hidden />
+        <span className="hidden lg:inline">Not downloaded</span>
+      </span>
+    );
+  }
   if (state.status === "loading") {
     const percent =
       state.progress === null ? null : Math.round(state.progress * 100);
@@ -130,6 +144,23 @@ function ToolingIndicatorContent({ state }: { state: ToolingStatus }) {
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">{state.message}</TooltipContent>
     </Tooltip>
+  );
+}
+
+/** Shown while the browser has no connection; saved languages still run. */
+function OfflineIndicator() {
+  const online = useOnline();
+  if (online) return null;
+  return (
+    <span
+      role="status"
+      data-testid="offline-indicator"
+      title="You're offline. Languages you have used before still work."
+      className="flex items-center gap-1 rounded-full border border-amber-600/40 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400"
+    >
+      <WifiOff className="size-3.5" aria-hidden />
+      <span className="sr-only sm:not-sr-only">Offline</span>
+    </span>
   );
 }
 
@@ -162,6 +193,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
       <ExamplesMenu language={props.language} onSelect={props.onExample} />
 
       <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+        <OfflineIndicator />
         <ToolingIndicator state={props.tooling} />
         <ExecutionStatusBadge
           status={props.status}

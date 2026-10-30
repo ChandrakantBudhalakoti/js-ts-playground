@@ -66,6 +66,14 @@ address `SITE_URL`, both in `src/lib/site.ts`.
   its own page, such as `/examples/c/star-pattern-pyramid`, and the examples
   page filters by language and level. Java versions are written and checked,
   and appear once Java runs in the playground.
+- **Offline and data-friendly:** a service worker saves the app, the editor,
+  the TypeScript compiler and each language runtime the first time they are
+  used, so anything used once works without internet. Before a language's
+  first download the console shows its size (and notes mobile data, Data
+  Saver or a slow connection) with Download and Cancel; nothing is ever
+  downloaded twice. Settings → Downloaded languages lists what is saved, with
+  sizes, and removes a language to free space. An Offline badge shows when
+  there is no connection.
 - **Sharing and drafts:** share links keep the code (and the input)
   compressed in the URL hash (no server storage), and your draft is saved in
   the browser.
@@ -148,6 +156,7 @@ starts in the background, so later runs don't wait for the runtime to boot.
 | `/examples`, `/examples/<slug>`                               | All examples (filter by language and level), and guides for async/await, array methods, promises, interfaces and generics |
 | `/examples/<language>`, `/examples/<language>/<program>`      | Beginner programs per language (`/examples/python`), and one page per program (`/examples/c/prime-number`)                |
 | `/sandbox`                                                    | The page the code runs in (framed by the editor, `X-Robots-Tag: noindex`)                                                 |
+| `/sw.js`                                                      | The service worker that keeps the app and used languages working offline (`src/lib/offline/service-worker.ts`)            |
 | `/sitemap.xml`, `/robots.txt`, `/opengraph-image`             | Generated sitemap, robots rules and social-sharing image                                                                  |
 
 Share links created before the editor moved to `/playground` point at
@@ -317,6 +326,26 @@ type errors_ to make type errors block too.
 Limits (in `src/lib/runtime/protocol.ts`): 1,000 console messages per run
 (after that the run is stopped), 128 KB per message, 10,000 characters per
 string, and bounded depth and item counts for objects.
+
+### Offline
+
+`/sw.js` (`src/lib/offline/service-worker.ts`) caches the app shell per build,
+and Monaco, the TypeScript libraries and each language runtime per version
+(their paths are versioned), so a new version replaces the old files and
+anything used once keeps working without a connection. Pages are fetched
+from the network first; versioned files come from the cache first.
+
+Once a runtime's download finishes, the worker checks that every file in its
+`index.json` is cached and marks it complete; only then does it count as
+downloaded (`src/lib/offline/downloads.ts`), and the console asks before the
+first download of any runtime that isn't. Settings → Downloaded languages
+deletes a runtime's cache.
+
+Browsers don't let a service worker serve a sandboxed (opaque-origin) frame,
+so the sandbox page is requested as `/sandbox?v=<build>` and served with
+`Cache-Control: immutable`: the browser's HTTP cache keeps it for offline runs.
+If that cache is cleared, the next offline run says so and asks for a
+connection once.
 
 ### Other languages
 

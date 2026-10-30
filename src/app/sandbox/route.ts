@@ -37,6 +37,7 @@ export async function GET(request: Request) {
   const document = sandboxDocument;
   const frameAncestors =
     process.env.SANDBOX_FRAME_ANCESTORS?.trim() || "'self'";
+  const versioned = new URL(request.url).searchParams.has("v");
   const accepted = request.headers.get("accept-encoding") ?? "";
   const encoding = /\bbr\b/.test(accepted)
     ? "br"
@@ -59,7 +60,11 @@ export async function GET(request: Request) {
       "Strict-Transport-Security": "max-age=63072000",
       "Permissions-Policy":
         "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), display-capture=(), fullscreen=()",
-      "Cache-Control": "public, max-age=600",
+      // The app asks for /sandbox?v=<build>: that exact page never changes,
+      // so the browser may keep it, and runs keep working offline.
+      "Cache-Control": versioned
+        ? "public, max-age=31536000, immutable"
+        : "public, max-age=600",
       "X-Robots-Tag": "noindex",
     },
   });

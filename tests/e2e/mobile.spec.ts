@@ -103,6 +103,22 @@ test.describe("phone and tablet layout", () => {
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
   });
 
+  test("fits a 360 px phone, offline badge included", async ({
+    page,
+    context,
+  }) => {
+    test.skip(isTablet(), "phones only");
+    await page.setViewportSize({ width: 360, height: 740 });
+    await openPlayground(page, { language: "python", code: "print(1)" });
+    await context.setOffline(true);
+    await expect(page.getByTestId("offline-indicator")).toBeVisible();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+    await expect(page.getByTestId("run-button")).toBeInViewport();
+    await expect(page.getByTestId("code-keys")).toBeInViewport();
+    await expect(page.getByRole("tab", { name: /Console/ })).toBeInViewport();
+    await context.setOffline(false);
+  });
+
   test("controls are big enough to tap", async ({ page }) => {
     await openPlayground(page, { code: "console.log(1)" });
     const controls = [

@@ -1,17 +1,25 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { downloads } from "@/lib/offline/downloads";
 import {
   AssetCache,
   type AssetBundleId,
   type DownloadState,
+  downloadAssetBundle,
 } from "@/lib/runtime/assets";
 
 let cache: AssetCache | null = null;
 
 /** Runtime file downloads shared by the whole page (browser only). */
 export function getAssetCache(): AssetCache {
-  cache ??= new AssetCache();
+  // Each completed download is saved for offline use.
+  cache ??= new AssetCache((id, onProgress) =>
+    downloadAssetBundle(id, onProgress).then((files) => {
+      downloads.downloaded(id);
+      return files;
+    }),
+  );
   return cache;
 }
 

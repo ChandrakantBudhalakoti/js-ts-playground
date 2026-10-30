@@ -26,6 +26,9 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "retain-on-failure",
+    // Tests that mock the network (page.route) would not see requests the
+    // service worker makes; the offline tests allow it.
+    serviceWorkers: "block",
   },
   projects: [
     {

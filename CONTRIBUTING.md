@@ -56,6 +56,7 @@ formatting.
 | C and C++ compilation              | `src/lib/clang` (Clang runs in a Web Worker of the app)                         |
 | Website pages (home, guides, …)    | `src/app/(site)`, `src/components/site`                                         |
 | Beginner programs (all languages)  | `src/lib/programs` (one file per program in `topics/`)                          |
+| Offline use and download prompts   | `src/lib/offline` (service worker, saved runtimes), `src/app/sw.js/route.ts`    |
 | Page titles, descriptions, sitemap | `src/lib/metadata.ts`, `src/lib/site.ts`, `src/app/sitemap.ts`                  |
 
 The README's [Architecture](README.md#architecture) section explains how the

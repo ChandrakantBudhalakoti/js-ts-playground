@@ -32,6 +32,8 @@ export function readJson<T>(
 export const STORAGE_KEYS = {
   settings: "jsts-playground:settings",
   draft: "jsts-playground:draft",
+  /** Runtimes downloaded in this browser: { id: version } (src/lib/offline/downloads.ts). */
+  downloads: "jsts-playground:downloads",
 } as const;
 
 /**

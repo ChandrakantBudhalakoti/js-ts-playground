@@ -8,6 +8,14 @@ const isDev = process.env.NODE_ENV === "development";
  */
 const sandboxUrl = process.env.NEXT_PUBLIC_SANDBOX_URL || "/sandbox";
 
+/**
+ * Identifies a build: the service worker's app-shell cache and the
+ * sandbox page's cacheable URL change with it. On Vercel it is the commit.
+ */
+const buildId = (
+  process.env.VERCEL_GIT_COMMIT_SHA || Date.now().toString(36)
+).slice(0, 12);
+
 function originOf(url: string): string {
   try {
     return new URL(url).origin;
@@ -45,7 +53,9 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   env: {
     NEXT_PUBLIC_SANDBOX_URL: sandboxUrl,
+    NEXT_PUBLIC_BUILD_ID: buildId,
   },
+  generateBuildId: () => buildId,
   turbopack: {
     rules: {
       "*.css": {
