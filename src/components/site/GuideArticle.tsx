@@ -1,4 +1,4 @@
-import { ArrowRight, ChevronRight, Play } from "lucide-react";
+import { ArrowRight, Play } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,9 +7,8 @@ import { playgroundHref } from "@/lib/examples";
 import { findGuide, GUIDES, guideExample } from "@/lib/guides";
 import { languageInfo } from "@/lib/languages";
 import { pageMetadata } from "@/lib/metadata";
-import { absoluteUrl } from "@/lib/site";
+import { Breadcrumbs } from "./Breadcrumbs";
 import { CodeBlock } from "./CodeBlock";
-import { JsonLd } from "./JsonLd";
 import { PageHeader } from "./PageHeader";
 import { PlaygroundLink } from "./PlaygroundLink";
 import { Section } from "./Section";
@@ -44,36 +43,8 @@ export function GuideArticle({ slug }: { slug: string }) {
 
   return (
     <article className="mx-auto max-w-3xl px-4 sm:px-6">
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "BreadcrumbList",
-          itemListElement: breadcrumbs.map((crumb, index) => ({
-            "@type": "ListItem",
-            position: index + 1,
-            name: crumb.name,
-            item: absoluteUrl(crumb.path),
-          })),
-        }}
-      />
       <PageHeader
-        above={
-          <nav aria-label="Breadcrumb" className="mb-4">
-            <ol className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
-              {breadcrumbs.slice(0, -1).map((crumb) => (
-                <li key={crumb.path} className="flex items-center gap-1">
-                  <Link href={crumb.path} className="hover:underline">
-                    {crumb.name}
-                  </Link>
-                  <ChevronRight className="size-3.5" aria-hidden />
-                </li>
-              ))}
-              <li aria-current="page" className="text-foreground">
-                {guide.heading}
-              </li>
-            </ol>
-          </nav>
-        }
+        above={<Breadcrumbs crumbs={breadcrumbs} />}
         heading={guide.heading}
         lead={guide.intro.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>

@@ -57,6 +57,15 @@ address `SITE_URL`, both in `src/lib/site.ts`.
 - **Examples:** runnable examples for every language in the editor's
   Examples menu. Any of them opens directly at `/playground?example=<id>`, and
   five have guide pages that explain them.
+- **Beginner programs:** the classic first-year syllabus and lab-file
+  programs (Hello World, input and output, even/odd, star patterns, Floyd's
+  triangle, prime numbers, factorial, Fibonacci, palindromes, Armstrong
+  numbers, arrays, linear search, bubble sort, matrix addition, strings,
+  functions, recursion) in Python, C and C++, each with a plain-English
+  explanation, sample input already in the Input tab, and its output. Each has
+  its own page, such as `/examples/c/star-pattern-pyramid`, and the examples
+  page filters by language and level. Java versions are written and checked,
+  and appear once Java runs in the playground.
 - **Sharing and drafts:** share links keep the code (and the input)
   compressed in the URL hash (no server storage), and your draft is saved in
   the browser.
@@ -128,17 +137,18 @@ starts in the background, so later runs don't wait for the runtime to boot.
 
 ## Pages
 
-| Route                                                         | What it is                                                                                 |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `/`                                                           | Landing page: features, how it works, limitations, FAQ                                     |
-| `/playground`                                                 | The editor. `?example=<id>` opens an example; `#lang=…&code=…` is a share link             |
-| `/languages`                                                  | Every language, grouped, with links to its page and the editor                             |
-| `/javascript`, `/typescript`                                  | What each language supports, the runtime environment, compiler settings and examples       |
-| `/python`, `/c`, `/cpp`, `/go`, `/ruby`, `/php`, `/lua`, `/r` | What runs and what doesn't, the runtime, examples and an FAQ (`src/lib/language-pages.ts`) |
-| `/manifest.webmanifest`, `/icon/<id>`, `/apple-icon/<id>`     | Web app manifest and generated app icons                                                   |
-| `/examples`, `/examples/<slug>`                               | All examples, and guides for async/await, array methods, promises, interfaces and generics |
-| `/sandbox`                                                    | The page the code runs in (framed by the editor, `X-Robots-Tag: noindex`)                  |
-| `/sitemap.xml`, `/robots.txt`, `/opengraph-image`             | Generated sitemap, robots rules and social-sharing image                                   |
+| Route                                                         | What it is                                                                                                                |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                                           | Landing page: features, how it works, limitations, FAQ                                                                    |
+| `/playground`                                                 | The editor. `?example=<id>` opens an example; `#lang=…&code=…` is a share link                                            |
+| `/languages`                                                  | Every language, grouped, with links to its page and the editor                                                            |
+| `/javascript`, `/typescript`                                  | What each language supports, the runtime environment, compiler settings and examples                                      |
+| `/python`, `/c`, `/cpp`, `/go`, `/ruby`, `/php`, `/lua`, `/r` | What runs and what doesn't, the runtime, examples and an FAQ (`src/lib/language-pages.ts`)                                |
+| `/manifest.webmanifest`, `/icon/<id>`, `/apple-icon/<id>`     | Web app manifest and generated app icons                                                                                  |
+| `/examples`, `/examples/<slug>`                               | All examples (filter by language and level), and guides for async/await, array methods, promises, interfaces and generics |
+| `/examples/<language>`, `/examples/<language>/<program>`      | Beginner programs per language (`/examples/python`), and one page per program (`/examples/c/prime-number`)                |
+| `/sandbox`                                                    | The page the code runs in (framed by the editor, `X-Robots-Tag: noindex`)                                                 |
+| `/sitemap.xml`, `/robots.txt`, `/opengraph-image`             | Generated sitemap, robots rules and social-sharing image                                                                  |
 
 Share links created before the editor moved to `/playground` point at
 `/#lang=…&code=…`; the home page forwards them, so they keep working.
@@ -250,12 +260,13 @@ src/
     sharing/encode-code.ts    URL-hash share links
     examples.ts, guides.ts    Runnable examples and the guide pages that explain them
     language-examples.ts      Examples for the WebAssembly languages
+    programs/                 Beginner programs: one file per program, every language (topics/)
     site.ts, metadata.ts      Canonical URL, site name, per-page metadata helper
     content.ts                Landing-page FAQ and copy shared with structured data
   types/playground.ts         Shared types (Language, Diagnostic, ConsoleEntry, RuntimeMessage, ...)
 tests/
   unit/                       Compiler, diagnostics, serializer, protocol, sandbox scripts, runtime worker, languages, sharing, sitemap and content
-  e2e/                        Editor, runtime, every language's examples, sharing, phone and tablet, guides, SEO metadata and accessibility (axe)
+  e2e/                        Editor, runtime, every language's examples and beginner programs, sharing, phone and tablet, guides, SEO metadata and accessibility (axe)
 ```
 
 Links into and out of `/playground` are plain `<a>` elements (full page

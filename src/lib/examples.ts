@@ -1,4 +1,5 @@
 import { LANGUAGE_EXAMPLES } from "@/lib/language-examples";
+import { type Level, PROGRAM_EXAMPLES } from "@/lib/programs";
 import { LANGUAGES } from "@/lib/languages";
 import type { CodeExample, Language } from "@/types/playground";
 
@@ -530,7 +531,35 @@ while (true) {
 export const EXAMPLES: CodeExample[] = [
   ...SCRIPT_EXAMPLES,
   ...LANGUAGE_EXAMPLES,
+  ...PROGRAM_EXAMPLES,
 ];
+
+/** Hand-written examples that need more than the basics. */
+const ADVANCED = new Set([
+  "ts-generics",
+  "js-async",
+  "js-async-await",
+  "js-promises",
+  "c-pointers",
+  "go-concurrency",
+]);
+
+/**
+ * How hard an example is. The beginner programs carry their own level; the
+ * other examples are intermediate unless listed in `ADVANCED`.
+ */
+export function exampleLevel(example: CodeExample): Level {
+  return (
+    example.level ?? (ADVANCED.has(example.id) ? "advanced" : "intermediate")
+  );
+}
+
+const PROGRAM_IDS = new Set(PROGRAM_EXAMPLES.map((example) => example.id));
+
+/** Whether an example is one of the beginner programs (src/lib/programs). */
+export function isProgramExample(example: CodeExample): boolean {
+  return PROGRAM_IDS.has(example.id);
+}
 
 /** Starter code per language: the first example of other languages. */
 export const DEFAULT_EXAMPLE = Object.fromEntries(

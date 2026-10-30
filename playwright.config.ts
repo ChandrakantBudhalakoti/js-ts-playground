@@ -31,7 +31,7 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /(mobile|languages)\.spec/,
+      testIgnore: /(mobile|languages|programs)\.spec/,
     },
     // The sandbox relies on browser-specific worker/CSP behaviour, so the
     // runtime suite also runs in Firefox.
@@ -52,19 +52,20 @@ export default defineConfig({
       use: { ...devices["iPad (gen 7)"], browserName: "chromium" },
       testMatch: /mobile\.spec/,
     },
-    // Every language's runtime, in Chromium and Firefox. These compile C++
-    // and boot interpreters, so they start once the other suites are done:
-    // run alongside them, they would slow timing-sensitive tests.
+    // Every language's runtime and the beginner programs, in Chromium and
+    // Firefox. These compile C++ and boot interpreters, so they start once
+    // the other suites are done: run alongside them, they would slow
+    // timing-sensitive tests.
     {
       name: "languages-chromium",
       use: { ...devices["Desktop Chrome"] },
-      testMatch: /languages\.spec/,
+      testMatch: /(languages|programs)\.spec/,
       dependencies: ["chromium", "firefox", "mobile", "tablet"],
     },
     {
       name: "languages-firefox",
       use: { ...devices["Desktop Firefox"] },
-      testMatch: /languages\.spec/,
+      testMatch: /(languages|programs)\.spec/,
       dependencies: ["chromium", "firefox", "mobile", "tablet"],
     },
   ],

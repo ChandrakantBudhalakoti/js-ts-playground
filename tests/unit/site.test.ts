@@ -13,6 +13,7 @@ import {
 } from "@/lib/examples";
 import { findGuide, GUIDES, guideExample } from "@/lib/guides";
 import { OG_IMAGE, pageMetadata } from "@/lib/metadata";
+import { programPaths } from "@/lib/programs";
 import { absoluteUrl, SITE_NAME, SITE_URL, STATIC_ROUTES } from "@/lib/site";
 
 const EXAMPLE_ROUTES_DIR = join(
@@ -24,10 +25,14 @@ describe("sitemap.xml", () => {
   const entries = sitemap();
   const urls = entries.map((entry) => entry.url);
 
-  it("lists every static page and every guide exactly once", () => {
+  it("lists every static page, guide and program page exactly once", () => {
     expect(new Set(urls).size).toBe(urls.length);
     expect(urls.toSorted()).toEqual(
-      [...STATIC_ROUTES, ...GUIDES.map((guide) => `/examples/${guide.slug}`)]
+      [
+        ...STATIC_ROUTES,
+        ...GUIDES.map((guide) => `/examples/${guide.slug}`),
+        ...programPaths(),
+      ]
         .map(absoluteUrl)
         .toSorted(),
     );
@@ -156,7 +161,8 @@ describe("guides", () => {
 
   it("each have a page, and every example page has a guide", () => {
     const folders = readdirSync(EXAMPLE_ROUTES_DIR, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
+      // [language] holds the beginner program pages (tests/unit/programs.test.ts).
+      .filter((entry) => entry.isDirectory() && entry.name !== "[language]")
       .map((entry) => entry.name);
     expect(folders.toSorted()).toEqual(
       GUIDES.map((guide) => guide.slug).toSorted(),

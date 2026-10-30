@@ -55,6 +55,7 @@ formatting.
 | Languages and their runtimes       | `src/lib/languages.ts`, `src/lib/runtime/drivers`, `runtime-assets.json`        |
 | C and C++ compilation              | `src/lib/clang` (Clang runs in a Web Worker of the app)                         |
 | Website pages (home, guides, …)    | `src/app/(site)`, `src/components/site`                                         |
+| Beginner programs (all languages)  | `src/lib/programs` (one file per program in `topics/`)                          |
 | Page titles, descriptions, sitemap | `src/lib/metadata.ts`, `src/lib/site.ts`, `src/app/sitemap.ts`                  |
 
 The README's [Architecture](README.md#architecture) section explains how the
@@ -81,6 +82,35 @@ To also give it a guide page at `/examples/<slug>`:
 2. Create `src/app/(site)/examples/<slug>/page.tsx` like the existing ones.
    The page is added to the sitemap automatically.
 3. Keep titles and descriptions unique; unit and browser tests check this.
+
+## Adding a beginner program
+
+The beginner library (`src/lib/programs`) holds the classic first-year
+programs (patterns, prime numbers, arrays, …), each written in Python, C,
+C++ and Java with a plain-English explanation. Each one gets a page per
+language (`/examples/c/prime-number`), an entry in the editor's **Examples →
+Beginner programs** menu and a place on the `/examples` page; all of that is
+generated from the data.
+
+1. Copy a file in `src/lib/programs/topics/` (`hello-world.ts` is the
+   simplest) to `<slug>.ts`, and list it in `PROGRAMS` in
+   `src/lib/programs/index.ts`, where the order is the syllabus order.
+2. Write the code in every language so that all of them print **exactly the
+   same output** for the same `stdin`, and put that text in `output`. Print
+   each prompt on its own line (the Input tab is not echoed), avoid trailing
+   spaces, and keep the Java to the basics listed in
+   `src/lib/programs/types.ts`.
+3. Write `heading` and `description` the way students search ("Prime Number
+   Program in {language}"); `{language}` is filled in for each page. Write the
+   `explanation` and `steps` for someone who has never programmed.
+4. Check it: `npx tsx scripts/check-programs.mts <slug>` runs the C and C++
+   with the playground's own Clang and the Python and Java with your local
+   `python` and `java`, and compares each output with `output`.
+   `npm run test` checks the data, and `tests/e2e/programs.spec.ts` runs
+   every program in the browser.
+
+A new language for the library goes in `PROGRAM_LANGUAGES` in
+`src/lib/programs/types.ts`; its pages appear once the playground can run it.
 
 ## Rules for the sandbox
 

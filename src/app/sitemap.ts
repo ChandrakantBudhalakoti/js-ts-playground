@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { GUIDES } from "@/lib/guides";
+import { programPaths } from "@/lib/programs";
 import { absoluteUrl, STATIC_ROUTES } from "@/lib/site";
 
 // No `lastModified`: there is no reliable per-page date, and an inaccurate
@@ -10,5 +11,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...GUIDES.map((guide) => ({
       url: absoluteUrl(`/examples/${guide.slug}`),
     })),
+    ...programPaths().map((path) => ({ url: absoluteUrl(path) })),
   ];
 }

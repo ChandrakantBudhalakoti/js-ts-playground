@@ -49,6 +49,11 @@ export const HOME_FAQS: Faq[] = [
       "JavaScript and TypeScript, plus Python, C, C++, Go, Ruby, PHP, Lua and R. Those run on WebAssembly builds of their usual implementations: CPython, Clang, the Yaegi Go interpreter, CRuby, PHP, Lua and webR. Programs that read standard input get the text of the Input tab.",
   },
   {
+    question: "Are there programs for beginners?",
+    answer:
+      "Yes. The examples include the classic first-year and lab-file programs (Hello World, even or odd, star patterns, Floyd's triangle, prime numbers, factorial, Fibonacci, palindromes, Armstrong numbers, arrays, sorting, strings, functions and recursion) in Python, C and C++. Each one is explained in plain English and opens in the playground with its sample input ready.",
+  },
+  {
     question: "Is my code sent to a server?",
     answer:
       "No. Type checking, compiling and running all happen in your browser, in every language. Drafts are saved in your browser's local storage, and share links keep the code in the part of the URL after the #, which browsers do not send to the server.",

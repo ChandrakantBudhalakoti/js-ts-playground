@@ -191,4 +191,9 @@ export interface CodeExample {
   code: string;
   /** Standard input the example expects (put in the Input panel). */
   stdin?: string;
+  /** How hard it is, for filtering (see `exampleLevel`). */
+  level?: Level;
 }
+
+/** How hard an example is. */
+export type Level = "beginner" | "intermediate" | "advanced";

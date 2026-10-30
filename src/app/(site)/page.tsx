@@ -15,12 +15,14 @@ import { CodePreview } from "@/components/site/CodePreview";
 import { JsonLd } from "@/components/site/JsonLd";
 import { LegacyShareRedirect } from "@/components/site/LegacyShareRedirect";
 import { PlaygroundLink } from "@/components/site/PlaygroundLink";
+import { programListPage } from "@/components/site/ProgramArticle";
 import { FaqList, Section } from "@/components/site/Section";
 import { Button } from "@/components/ui/button";
 import { faqJsonLd, HOME_FAQS } from "@/lib/content";
 import { GUIDES } from "@/lib/guides";
-import { LANGUAGES } from "@/lib/languages";
+import { LANGUAGES, languageInfo } from "@/lib/languages";
 import { pageMetadata } from "@/lib/metadata";
+import { runnableLanguages } from "@/lib/programs";
 import {
   absoluteUrl,
   REPO_URL,
@@ -238,6 +240,26 @@ export default function HomePage() {
           heading="Learn by running examples"
           intro="Each example explains a concept and opens in the playground, ready to run and change."
         >
+          <h3 className="font-medium">Programs for beginners</h3>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            The classic first-year and lab-file programs, from Hello World and
+            star patterns to prime numbers, sorting and recursion, each
+            explained in plain English.
+          </p>
+          <ul className="mt-4 mb-10 flex flex-wrap gap-3">
+            {runnableLanguages().map((language) => (
+              <li key={language}>
+                <Link
+                  href={programListPage(language).path}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors hover:bg-muted/50"
+                >
+                  {languageInfo(language).name} programs
+                  <ArrowRight className="size-4" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <h3 className="mb-4 font-medium">Guided examples</h3>
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {GUIDES.map((guide) => (
               <li key={guide.slug}>

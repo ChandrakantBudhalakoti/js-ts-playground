@@ -1,13 +1,18 @@
 import { ArrowRight, Play } from "lucide-react";
 import Link from "next/link";
-import { EXAMPLES, playgroundHref } from "@/lib/examples";
+import { EXAMPLES, isProgramExample, playgroundHref } from "@/lib/examples";
 import { GUIDES } from "@/lib/guides";
 import type { Language } from "@/types/playground";
 import { PlaygroundLink } from "./PlaygroundLink";
 
-/** The playground's examples for one language, each opening in the editor. */
+/**
+ * The playground's examples for one language, each opening in the editor.
+ * The beginner programs are listed separately (ProgramList).
+ */
 export function ExampleList({ language }: { language: Language }) {
-  const examples = EXAMPLES.filter((example) => example.language === language);
+  const examples = EXAMPLES.filter(
+    (example) => example.language === language && !isProgramExample(example),
+  );
   return (
     <ul className="divide-y rounded-xl border">
       {examples.map((example) => {
