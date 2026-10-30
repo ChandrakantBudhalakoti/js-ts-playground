@@ -18,11 +18,14 @@ import {
  */
 test.describe.configure({ timeout: 180_000 });
 
-/** A line each example prints, proving the program ran to its end. */
+/**
+ * A line each example prints, proving the program ran to its end. It is
+ * looked for in the whole console: printed text is batched into entries by
+ * timing, so on a slow machine a line can land in any entry.
+ */
 const EXPECTED_OUTPUT: Record<string, string> = {
   "py-hello": "Hello, Ada! You know 2 languages.",
-  // The last line, so it is in the last console entry however printed text
-  // is batched (it also shows that both input lines were read).
+  // Also shows that both input lines were read.
   "py-input": "Sum: 12 Average: 4.0",
   "c-hello": "First 10 primes: 2 3 5 7 11 13 17 19 23 29",
   "c-input": "Read 5 numbers: sum 24, max 9, average 4.80",
@@ -74,7 +77,7 @@ test.describe("examples in every language", () => {
         return;
       }
       await expectStatus(page, "completed", STATUS_TIMEOUT);
-      await expect(loggedLines(page).last()).toContainText(
+      await expect(consoleOutput(page)).toContainText(
         EXPECTED_OUTPUT[example.id],
       );
     });

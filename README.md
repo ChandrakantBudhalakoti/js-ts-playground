@@ -1,4 +1,4 @@
-# CodeSlate
+# CodeTakhti
 
 [![CI](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -12,16 +12,20 @@ with a console for output and errors. Every language runs in your browser,
 compiled to WebAssembly: your code is never sent to a server. Nothing to
 install, no account.
 
-The project used to be called JS/TS Playground; the repository, the
-deployment URL and the browser storage keys keep that name, so existing
-links and saved drafts still work. The display name is `SITE_NAME` in
-`src/lib/site.ts`.
+A _takhti_ (तख़्ती) is the wooden slate generations of Indian children
+practised writing on. CodeTakhti is that slate for code: learn to code on the
+device you already have, the way generations learned to write on a takhti.
 
-**[Live demo: js-ts-playground-eight.vercel.app](https://js-ts-playground-eight.vercel.app/)**
-· [Open the editor](https://js-ts-playground-eight.vercel.app/playground)
-· [Examples](https://js-ts-playground-eight.vercel.app/examples)
+The project was first called JS/TS Playground, then CodeSlate. The repository
+and the browser storage keys keep the original name, so existing links and
+saved drafts still work. The display name is `SITE_NAME` and the canonical
+address `SITE_URL`, both in `src/lib/site.ts`.
 
-![CodeSlate running a Python example: code in the editor, and the console below showing its output and "Completed in 16 ms"](docs/images/playground.png)
+**[Live demo: code-slatee.vercel.app](https://code-slatee.vercel.app/)**
+· [Open the editor](https://code-slatee.vercel.app/playground)
+· [Examples](https://code-slatee.vercel.app/examples)
+
+![CodeTakhti running a Python example: code in the editor, and the console below showing its output and "Completed in 18 ms"](docs/images/playground.png)
 
 ## Demo
 
@@ -60,9 +64,12 @@ links and saved drafts still work. The display name is `SITE_NAME` in
   the full screen as tabs, every control is at least 40 px tall on touch
   screens, and a scrollable row of code keys types brackets, quotes,
   operators, Tab and the arrow keys (with auto-closing brackets, like a real
-  keyboard). The layout follows the on-screen keyboard, word wrap is on by
-  default on phones, Share opens the system share sheet, and the site can be
-  installed to the home screen (web app manifest and icons).
+  keyboard). A long press selects a word (keep the finger down and move it to
+  select more), a tap on a line number selects the line, and handles and a
+  Cut / Copy / Paste / Select all menu work with any selection. The layout
+  follows the on-screen keyboard, word wrap is on by default on phones, Share
+  opens the system share sheet, and the site can be installed to the home
+  screen (web app manifest and icons).
 - **Extras:** editor settings and dark and light themes.
 
 ### Keyboard shortcuts
@@ -215,7 +222,7 @@ src/
   components/
     playground/Playground.tsx Orchestration: document, run flow, sharing, ?example=, shortcuts
     layout/PlaygroundLayout   Resizable editor/output on desktop, tabs on mobile
-    editor/                   CodeEditor (Monaco), toolbar, language, examples, settings, status, code keys
+    editor/                   CodeEditor (Monaco), toolbar, language, examples, settings, status, code keys, touch selection
     console/                  ConsolePanel, ConsoleEntry
     input/                    InputPanel (standard input)
     diagnostics/              ProblemsPanel
@@ -412,11 +419,11 @@ bundle.
 
 Optional build-time environment variables:
 
-| Variable                   | Purpose                                                                                                                                                                                   |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SITE_URL`                 | Canonical origin for canonical links, Open Graph URLs and the sitemap. Defaults to `https://js-ts-playground-eight.vercel.app`. Set it on a fork or self-hosted copy with its own domain. |
-| `GOOGLE_SITE_VERIFICATION` | Token for Google Search Console's HTML-tag verification; adds `<meta name="google-site-verification">`.                                                                                   |
-| `NEXT_PUBLIC_SANDBOX_URL`  | Separate sandbox origin (see above).                                                                                                                                                      |
+| Variable                   | Purpose                                                                                                                                                                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_SITE_URL`     | Canonical origin for canonical links, og:url, the sitemap, robots.txt and structured data. Defaults to `https://code-slatee.vercel.app` (`SITE_URL` in `src/lib/site.ts`). Set it on a fork or self-hosted copy with its own domain. |
+| `GOOGLE_SITE_VERIFICATION` | Token for Google Search Console's HTML-tag verification; adds `<meta name="google-site-verification">`.                                                                                                                              |
+| `NEXT_PUBLIC_SANDBOX_URL`  | Separate sandbox origin (see above).                                                                                                                                                                                                 |
 
 ### Self-hosting
 
@@ -457,7 +464,7 @@ A `*.vercel.app` subdomain can't be verified through DNS, so use a
 **URL-prefix** property with the **HTML tag** method:
 
 1. In [Search Console](https://search.google.com/search-console), add a
-   URL-prefix property for `https://js-ts-playground-eight.vercel.app/` and
+   URL-prefix property for `https://code-slatee.vercel.app/` and
    choose _HTML tag_. Copy only the `content` value of the tag.
 2. In Vercel, under _Project → Settings → Environment Variables_, add
    `GOOGLE_SITE_VERIFICATION` with that value for _Production_, then redeploy

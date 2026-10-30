@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+import type * as Monaco from "monaco-editor";
 import { LANGUAGES } from "../../src/lib/languages";
 import {
   answerDialog,
@@ -19,6 +20,62 @@ async function horizontalOverflow(page: Page) {
   return page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
+}
+
+/**
+ * A finger, through the DevTools protocol: real touch and pointer events,
+ * held for as long as a test needs (Playwright itself only taps).
+ */
+async function finger(page: Page) {
+  const client = await page.context().newCDPSession(page);
+  const send = (
+    type: "touchStart" | "touchMove" | "touchEnd",
+    touchPoints: { x: number; y: number }[],
+  ) => client.send("Input.dispatchTouchEvent", { type, touchPoints });
+  return {
+    down: (x: number, y: number) => send("touchStart", [{ x, y }]),
+    move: (x: number, y: number) => send("touchMove", [{ x, y }]),
+    up: () => send("touchEnd", []),
+  };
+}
+
+async function centerOf(locator: Locator) {
+  const box = await locator.boundingBox();
+  expect(box, String(locator)).not.toBeNull();
+  return { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+}
+
+/** The middle of a character of the code, on the screen. */
+function pointAt(page: Page, lineNumber: number, column: number) {
+  return page.evaluate(
+    ([lineNumber, column]) => {
+      const { monaco } = window as unknown as { monaco: typeof Monaco };
+      const [editor] = monaco.editor.getEditors();
+      const rect = editor.getDomNode()!.getBoundingClientRect();
+      const at = (column: number) =>
+        editor.getScrolledVisiblePosition({ lineNumber, column })!;
+      const { left, top, height } = at(column);
+      return {
+        x: rect.left + (left + at(column + 1).left) / 2,
+        y: rect.top + top + height / 2,
+        lineHeight: height,
+      };
+    },
+    [lineNumber, column],
+  );
+}
+
+/** The editor's whole text and its selected part. */
+function editorText(page: Page) {
+  return page.evaluate(() => {
+    const { monaco } = window as unknown as { monaco: typeof Monaco };
+    const [editor] = monaco.editor.getEditors();
+    const model = editor.getModel()!;
+    return {
+      value: model.getValue(),
+      selected: model.getValueInRange(editor.getSelection()!),
+    };
+  });
 }
 
 test.describe("phone and tablet layout", () => {
@@ -107,6 +164,105 @@ test.describe("phone and tablet layout", () => {
     await expect(
       page.locator(".monaco-editor .view-lines").first(),
     ).not.toContainText(";");
+  });
+
+  test("a long press selects code; handles and the menu copy, cut and paste", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const clipboard = { text: "" };
+      Object.assign(window, { __clipboard: clipboard });
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            clipboard.text = text;
+          },
+          readText: async () => clipboard.text,
+        },
+      });
+    });
+    const code = "const greeting = 'hello';\nconsole.log(greeting);\n";
+    await openPlayground(page, { code });
+    const touch = await finger(page);
+    const menu = page.getByTestId("selection-menu");
+    const endHandle = page.getByTestId("selection-handle-end");
+    const selected = async () => (await editorText(page)).selected;
+
+    // Holding a finger on a word selects it; lifting it shows the menu.
+    const word = await pointAt(page, 1, 9); // const gr|eeting
+    await touch.down(word.x, word.y);
+    await expect(endHandle).toBeVisible();
+    await expect(menu).toBeHidden();
+    await touch.up();
+    await expect(menu).toBeVisible();
+    await expect.poll(selected).toBe("greeting");
+
+    // The end handle extends the selection to the end of the next line.
+    const handle = await centerOf(endHandle);
+    const { lineHeight } = word;
+    await touch.down(handle.x, handle.y);
+    await touch.move(handle.x, handle.y + lineHeight / 2);
+    await touch.move(page.viewportSize()!.width - 4, handle.y + lineHeight);
+    await touch.up();
+    const lines = "greeting = 'hello';\nconsole.log(greeting);";
+    await expect.poll(selected).toBe(lines);
+
+    await menu.getByRole("button", { name: "Copy" }).click();
+    await expect(menu.getByRole("button", { name: "Copied" })).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (window as unknown as { __clipboard: { text: string } }).__clipboard
+              .text,
+        ),
+      )
+      .toBe(lines);
+
+    // Cut removes it; a long press past the end of the line pastes it back.
+    await menu.getByRole("button", { name: "Cut" }).click();
+    await expect
+      .poll(async () => (await editorText(page)).value)
+      .toBe("const \n");
+    await expect(menu).toBeHidden();
+    const editor = (await page
+      .locator(".monaco-editor")
+      .first()
+      .boundingBox())!;
+    await touch.down(editor.x + editor.width - 24, word.y);
+    await page.waitForTimeout(800); // a long press (nothing to see until it ends)
+    await touch.up();
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("button", { name: "Copy" })).toHaveCount(0);
+    await menu.getByRole("button", { name: "Paste" }).click();
+    await expect.poll(async () => (await editorText(page)).value).toBe(code);
+
+    // Moving the finger after a long press extends the selection, word first.
+    const log = await pointAt(page, 2, 10); // console.l|og
+    await touch.down(log.x, log.y);
+    await expect(endHandle).toBeVisible();
+    await touch.move((await pointAt(page, 2, 1)).x - 4, log.y);
+    await touch.up();
+    await expect.poll(selected).toBe("console.log");
+
+    // A tap elsewhere ends the selection.
+    await page.waitForTimeout(500); // not a double tap
+    await touch.down(word.x, word.y);
+    await touch.up();
+    await expect(menu).toBeHidden();
+    await expect(endHandle).toBeHidden();
+    await expect.poll(selected).toBe("");
+
+    // A tap on a line number selects the line, with the same handles and menu.
+    const lineNumber = await centerOf(
+      page.locator(".monaco-editor .line-numbers", { hasText: /^2$/ }),
+    );
+    await touch.down(lineNumber.x, lineNumber.y);
+    await touch.up();
+    await expect.poll(selected).toBe("console.log(greeting);\n");
+    await expect(menu).toBeVisible();
+    await expect(endHandle).toBeVisible();
   });
 
   test("long lines wrap by default on phones", async ({ page }) => {

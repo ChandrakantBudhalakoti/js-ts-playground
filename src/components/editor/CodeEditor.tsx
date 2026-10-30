@@ -14,6 +14,7 @@ import {
   useState,
   type Ref,
 } from "react";
+import { TouchSelection } from "@/components/editor/TouchSelection";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   configureMonaco,
@@ -94,7 +95,11 @@ export default function CodeEditor({
   const monacoRef = useRef<Monaco | null>(null);
   const pendingValue = useRef<string | null>(null);
   const callbacks = useRef({ onRun, onSave, getInitialValue });
-  const [ready, setReady] = useState(false);
+  const [mounted, setMounted] = useState<{
+    editor: MonacoEditor;
+    monaco: Monaco;
+  } | null>(null);
+  const ready = mounted !== null;
   const [loadError, setLoadError] = useState<string | null>(null);
   // Language the model is created with; later changes are applied in place.
   const [initialLanguage] = useState(language);
@@ -151,7 +156,7 @@ export default function CodeEditor({
 
     // Re-measure once the web font is ready so the cursor lines up.
     void document.fonts?.ready.then(() => monaco.editor.remeasureFonts());
-    setReady(true);
+    setMounted({ editor: editorRef.current, monaco });
   };
 
   // Change the language of the one model in place, so its undo history
@@ -230,8 +235,9 @@ export default function CodeEditor({
     [],
   );
 
-  // Phones get a slimmer gutter; touch screens keep the native long-press
-  // menu and selection instead of Monaco's context menu and text dragging.
+  // Phones get a slimmer gutter. Touch screens select with a long press and
+  // handles (TouchSelection) instead of Monaco's context menu and text
+  // dragging.
   const compact = useMediaQuery("(max-width: 639px)") === true;
   const touch = useMediaQuery("(pointer: coarse)") === true;
 
@@ -303,17 +309,22 @@ export default function CodeEditor({
   }
 
   return (
-    <Editor
-      className="h-full"
-      defaultLanguage={initialLanguage}
-      defaultPath={MODEL_URI}
-      defaultValue=""
-      theme={MONACO_THEMES[theme]}
-      options={options}
-      loading={<EditorLoading />}
-      beforeMount={handleBeforeMount}
-      onMount={handleMount}
-      onChange={(value) => onChange(value ?? "")}
-    />
+    <div className="relative h-full">
+      <Editor
+        className="h-full"
+        defaultLanguage={initialLanguage}
+        defaultPath={MODEL_URI}
+        defaultValue=""
+        theme={MONACO_THEMES[theme]}
+        options={options}
+        loading={<EditorLoading />}
+        beforeMount={handleBeforeMount}
+        onMount={handleMount}
+        onChange={(value) => onChange(value ?? "")}
+      />
+      {touch && mounted && (
+        <TouchSelection editor={mounted.editor} monaco={mounted.monaco} />
+      )}
+    </div>
   );
 }

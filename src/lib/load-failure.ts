@@ -1,9 +1,10 @@
+import { SITE_NAME } from "@/lib/site";
+
 /**
  * Shown when one of the site's own scripts fails to download, for example
  * while the server is overloaded or the connection drops.
  */
-const MESSAGE =
-  "Some of CodeSlate's files didn't download, so parts of the page may not work. Your code is saved in this browser.";
+const MESSAGE = `Some of ${SITE_NAME}'s files didn't download, so parts of the page may not work. Your code is saved in this browser.`;
 
 /**
  * Runs as an inline script at the top of every page, before React: if a
