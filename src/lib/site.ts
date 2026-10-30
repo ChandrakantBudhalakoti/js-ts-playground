@@ -6,7 +6,7 @@
  * (for example on a self-hosted copy with its own domain).
  */
 export const SITE_URL = (
-  process.env.SITE_URL || "https://js-ts-playground-eight.vercel.app"
+  process.env.SITE_URL || "https://code-slatee.vercel.app"
 ).replace(/\/+$/, "");
 
 /**

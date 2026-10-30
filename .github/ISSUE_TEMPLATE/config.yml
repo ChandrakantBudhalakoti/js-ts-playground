@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/ChandrakantBudhalakoti/js-ts-playground/blob/main/SECURITY.md
     about: Please report security issues privately, as described in SECURITY.md.
   - name: Try the live playground
-    url: https://js-ts-playground-eight.vercel.app/playground
+    url: https://code-slatee.vercel.app/playground
     about: Check whether the problem still happens on the latest deployment.
