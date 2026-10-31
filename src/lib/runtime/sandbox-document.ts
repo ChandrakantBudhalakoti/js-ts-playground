@@ -2,6 +2,7 @@ import type { SerializedValue } from "@/types/playground";
 import { goDriver } from "./drivers/go";
 import { luaDriver } from "./drivers/lua";
 import { phpDriver } from "./drivers/php";
+import { javaDriver } from "./drivers/java";
 import { pythonDriver } from "./drivers/python";
 import { rDriver } from "./drivers/r";
 import { rubyDriver } from "./drivers/ruby";
@@ -42,6 +43,7 @@ const DRIVERS: Record<string, DriverFactory> = {
   php: phpDriver,
   go: goDriver,
   r: rDriver,
+  java: javaDriver,
   wasi: wasiDriver,
 };
 
@@ -404,6 +406,8 @@ function sandboxRelayMain(
     /** Set for runtime workers (BOOT); false until the code was sent. */
     booted?: boolean;
     started?: boolean;
+    /** STARTED was forwarded (it is forwarded once). */
+    programStarted?: boolean;
     outputChars: number;
     /** Text output not yet sent, from one stream. */
     pending: { level: string; text: string; elapsedMs: number } | null;
@@ -561,6 +565,10 @@ function sandboxRelayMain(
       if (run.booted !== false) return;
       run.booted = true;
       send({ type: "BOOTED", runId: run.id, elapsedMs: message.elapsedMs });
+    } else if (message.type === "STARTED") {
+      if (!run.started || run.programStarted || run.done) return;
+      run.programStarted = true;
+      send({ type: "STARTED", runId: run.id, elapsedMs: message.elapsedMs });
     } else if (message.type === "BOOT_ERROR") {
       send({
         type: "ERROR",

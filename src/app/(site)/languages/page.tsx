@@ -10,7 +10,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata({
   title: "Programming Languages You Can Run Online",
   description:
-    "Run JavaScript, TypeScript, Python, C, C++, Go, Ruby, PHP, Lua and R online, free, in your browser on a phone, tablet or computer. See what each one supports.",
+    "Run JavaScript, TypeScript, Python, C, C++, Java, Go, Ruby, PHP, Lua and R online, free, in your browser on a phone, tablet or computer. See what each one supports.",
   path: "/languages",
 });
 

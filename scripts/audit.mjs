@@ -21,7 +21,10 @@ const runtimeSpecs = JSON.parse(
 );
 const SHIPPED_DEV_PACKAGES = new Set([
   "typescript",
-  ...Object.values(runtimeSpecs).map((spec) => spec.package),
+  // Runtimes kept in this repository (`path`) are not npm packages.
+  ...Object.values(runtimeSpecs)
+    .filter((spec) => !spec.path)
+    .map((spec) => spec.package),
 ]);
 
 /**

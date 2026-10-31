@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { useT } from "@/hooks/useLocale";
 
 interface InputPanelProps {
   value: string;
@@ -11,12 +12,13 @@ interface InputPanelProps {
 
 /** Standard input for the program: read from the start on every run. */
 export function InputPanel({ value, onChange, language }: InputPanelProps) {
+  const t = useT();
   const id = useId();
   const hintId = `${id}-hint`;
   return (
     <div className="flex h-full flex-col gap-1.5 p-2">
       <label htmlFor={id} className="sr-only">
-        Standard input
+        {t("input.label")}
       </label>
       <textarea
         id={id}
@@ -27,13 +29,11 @@ export function InputPanel({ value, onChange, language }: InputPanelProps) {
         spellCheck={false}
         autoCapitalize="off"
         autoCorrect="off"
-        placeholder={"Text the program reads, for example\nAda\n3 4 5"}
+        placeholder={t("input.placeholder")}
         className="min-h-0 flex-1 resize-none rounded-md border bg-transparent p-2 font-mono text-[12.5px] leading-5 pointer-coarse:text-base pointer-coarse:leading-6 outline-none placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       />
       <p id={hintId} className="px-0.5 text-xs text-muted-foreground">
-        {language} reads this as standard input (
-        <code className="font-mono">stdin</code>), from the start on every run.
-        After the last line it sees the end of input.
+        {t("input.help", { name: language })}
       </p>
     </div>
   );

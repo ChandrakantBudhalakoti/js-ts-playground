@@ -3,6 +3,8 @@
 import type * as MonacoNamespace from "monaco-editor";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useLocale } from "@/hooks/useLocale";
+import { type MessageKey, t } from "@/lib/i18n";
 import type { Monaco, MonacoEditor } from "@/lib/monaco/setup";
 
 type IPosition = MonacoNamespace.IPosition;
@@ -55,24 +57,28 @@ type Drag =
 type Controller = ReturnType<typeof createController>;
 
 interface MenuItem {
-  label: string;
+  label: MessageKey;
   /** Resolves to true when it worked. */
   run: (controller: Controller) => unknown;
   needsSelection: boolean;
   /** Shown in place of the label for a moment once it worked. */
-  done?: string;
+  done?: MessageKey;
 }
 
 const MENU: MenuItem[] = [
-  { label: "Cut", run: (c) => c.cut(), needsSelection: true },
+  { label: "selection.cut", run: (c) => c.cut(), needsSelection: true },
   {
-    label: "Copy",
+    label: "selection.copy",
     run: (c) => c.copy(),
     needsSelection: true,
-    done: "Copied",
+    done: "selection.copied",
   },
-  { label: "Paste", run: (c) => c.paste(), needsSelection: false },
-  { label: "Select all", run: (c) => c.selectAll(), needsSelection: false },
+  { label: "selection.paste", run: (c) => c.paste(), needsSelection: false },
+  {
+    label: "selection.selectAll",
+    run: (c) => c.selectAll(),
+    needsSelection: false,
+  },
 ];
 
 /**
@@ -338,7 +344,7 @@ function createController(
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      toast.error("Could not copy to the clipboard.");
+      toast.error(t("selection.copyFailed"));
       return false;
     }
   }
@@ -394,8 +400,8 @@ function createController(
         text = await navigator.clipboard.readText();
       } catch {
         // Phone keyboards have a paste key of their own.
-        toast.error("Could not read the clipboard.", {
-          description: "Use the paste key on your keyboard instead.",
+        toast.error(t("selection.pasteFailed"), {
+          description: t("selection.pasteHint"),
         });
         editor.focus();
         return;
@@ -443,6 +449,8 @@ export function TouchSelection({
   const menuRef = useRef<HTMLDivElement>(null);
   const controller = useRef<Controller | null>(null);
   const [view, setView] = useState<SelectionView | null>(null);
+  // Re-render when the interface language changes.
+  useLocale();
   // The item that just worked shows it ("Copied") for a moment: on phones a
   // toast would cover the top of the code.
   const [done, setDone] = useState<string | null>(null);
@@ -535,7 +543,7 @@ export function TouchSelection({
         <div
           ref={menuRef}
           role="toolbar"
-          aria-label="Selection"
+          aria-label={t("selection.toolbar")}
           data-testid="selection-menu"
           className="pointer-events-auto absolute flex divide-x overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-md"
         >
@@ -549,7 +557,7 @@ export function TouchSelection({
                 onClick={() => void choose(item)}
                 className="h-10 px-3 text-sm font-medium whitespace-nowrap active:bg-muted"
               >
-                {done === item.label ? item.done : item.label}
+                {t(done === item.label && item.done ? item.done : item.label)}
               </button>
             ),
           )}

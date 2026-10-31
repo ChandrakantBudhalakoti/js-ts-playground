@@ -338,6 +338,7 @@ export function runtimeWorkerMain(
     readAllStdin: () => readStdin(stdin.length),
     stdinBytes: () => stdin.slice(),
     reportError,
+    started: () => post({ type: "STARTED", elapsedMs: elapsed() }),
   };
 
   // --- errors outside the driver's control -------------------------------

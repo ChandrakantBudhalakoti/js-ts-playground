@@ -4,6 +4,7 @@ import { encodeShareHash } from "../../src/lib/sharing/encode-code";
 import { GUIDES } from "../../src/lib/guides";
 import { LANGUAGE_PAGES } from "../../src/lib/language-pages";
 import { languageInfo } from "../../src/lib/languages";
+import { programPaths } from "../../src/lib/programs";
 import { SITE_NAME, SITE_URL, STATIC_ROUTES } from "../../src/lib/site";
 import { HERO_EXAMPLE } from "../../src/lib/content";
 import {
@@ -29,6 +30,11 @@ const CONTENT_PAGES = [
     path: `/examples/${guide.slug}`,
     h1: guide.heading,
   })),
+  { path: "/examples/python", h1: "Python Programs for Beginners" },
+  {
+    path: "/examples/c/star-pattern-pyramid",
+    h1: "Pyramid Star Pattern Program in C",
+  },
 ];
 
 /** Canonical URLs may or may not end the bare origin with a slash. */
@@ -147,6 +153,7 @@ test.describe("SEO metadata", () => {
     const expected = [
       ...STATIC_ROUTES,
       ...GUIDES.map((g) => `/examples/${g.slug}`),
+      ...programPaths(),
     ].map((path) => normalize(`${SITE_URL}${path}`));
     expect(parsed.locs.map(normalize).toSorted()).toEqual(expected.toSorted());
 

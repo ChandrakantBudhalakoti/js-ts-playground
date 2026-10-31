@@ -2,17 +2,21 @@
 
 import { Bug, CircleCheck, CircleX, Info, TriangleAlert } from "lucide-react";
 import { memo } from "react";
+import { useT } from "@/hooks/useLocale";
 import {
   formatConsoleArgs,
   formatTopLevel,
   runtimeErrorTitle,
 } from "@/lib/console/format";
+import { LANGUAGES } from "@/lib/languages";
 import { SITE_NAME } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import type {
   ConsoleEntry as ConsoleEntryData,
+  Language,
   SourceLocation,
 } from "@/types/playground";
+import { FriendlyError } from "./FriendlyError";
 
 const LEVEL_STYLES = {
   log: { icon: null, row: "", text: "" },
@@ -40,7 +44,13 @@ interface ConsoleEntryProps {
   onNavigate: (location: SourceLocation) => void;
 }
 
+/** The language of the run that produced an entry, from its file name. */
+function languageOfFile(fileName: string | undefined): Language | undefined {
+  return LANGUAGES.find((info) => info.fileName === fileName)?.id;
+}
+
 function RuntimeError({ entry, onNavigate }: ConsoleEntryProps) {
+  const t = useT();
   const error = entry.args[0];
   // The file of the run that produced the error, not the current language.
   const fileName = entry.fileName ?? "code";
@@ -62,16 +72,30 @@ function RuntimeError({ entry, onNavigate }: ConsoleEntryProps) {
             type="button"
             className="text-xs underline decoration-dotted underline-offset-2 opacity-80 hover:opacity-100"
             onClick={() => onNavigate(entry.location!)}
-            aria-label={`Go to ${fileName} line ${entry.location.line}, column ${entry.location.column}`}
+            aria-label={t("console.goTo", {
+              file: fileName,
+              line: entry.location.line,
+              column: entry.location.column,
+            })}
           >
             {fileName}:{entry.location.line}:{entry.location.column}
           </button>
         )}
       </div>
+      {languageOfFile(entry.fileName) && (
+        <FriendlyError
+          language={languageOfFile(entry.fileName)!}
+          error={`${error.name}: ${error.message}`}
+          line={entry.location?.line}
+          onGoToLine={
+            entry.location ? () => onNavigate(entry.location!) : undefined
+          }
+        />
+      )}
       {frames && (
         <details className="mt-0.5">
           <summary className="cursor-pointer text-xs opacity-70 select-none hover:opacity-100">
-            Stack trace
+            {t("console.stackTrace")}
           </summary>
           <pre className="mt-1 text-xs whitespace-pre-wrap break-words opacity-80">
             {frames}
@@ -86,6 +110,7 @@ export const ConsoleEntry = memo(function ConsoleEntry({
   entry,
   onNavigate,
 }: ConsoleEntryProps) {
+  const t = useT();
   const success = entry.tone === "success";
   const isSystem = entry.kind === "system";
   const style = success
@@ -132,6 +157,21 @@ export const ConsoleEntry = memo(function ConsoleEntry({
         <div className={cn("flex min-w-0 flex-1", style.text)}>
           <RuntimeError entry={entry} onNavigate={onNavigate} />
         </div>
+      ) : entry.explain ? (
+        <div className="min-w-0 flex-1">
+          <pre
+            className={cn(
+              "font-sans whitespace-pre-wrap break-words",
+              style.text,
+            )}
+          >
+            {formatTopLevel(entry.args[0])}
+          </pre>
+          <FriendlyError
+            language={languageOfFile(entry.fileName) ?? "javascript"}
+            error={entry.explain}
+          />
+        </div>
       ) : (
         <pre
           className={cn(
@@ -148,7 +188,7 @@ export const ConsoleEntry = memo(function ConsoleEntry({
       {!isSystem && (
         <span
           className="mt-0.5 shrink-0 text-[10.5px] text-muted-foreground/70 tabular-nums"
-          title="Time since the run started"
+          title={t("console.elapsed")}
         >
           {formatElapsed(entry.elapsedMs)}
         </span>

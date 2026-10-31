@@ -4,7 +4,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata({
   title: "Online Code Editor and Compiler",
   description:
-    "Write and run Python, C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua or R in your browser, with an editor and console that work on phones and tablets.",
+    "Write and run Python, C, C++, Java, JavaScript, TypeScript, Go, Ruby, PHP, Lua or R in your browser, with an editor and console that work on phones and tablets.",
   path: "/playground",
 });
 

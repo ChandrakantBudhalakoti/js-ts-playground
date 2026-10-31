@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated / third-party output.
     "public/vendor/**",
+    "runtimes/java/compiler.wasm-runtime.js",
     "test-results/**",
     "playwright-report/**",
   ]),

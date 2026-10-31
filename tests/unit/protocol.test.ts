@@ -68,6 +68,9 @@ describe("parseRuntimeMessage", () => {
       parseRuntimeMessage({ ...base, type: "BOOTED", elapsedMs: 900 }),
     ).toEqual({ ...base, type: "BOOTED", elapsedMs: 900 });
     expect(
+      parseRuntimeMessage({ ...base, type: "STARTED", elapsedMs: 1_200 }),
+    ).toEqual({ ...base, type: "STARTED", elapsedMs: 1_200 });
+    expect(
       parseRuntimeMessage({ ...base, type: "DONE", elapsedMs: 1, exitCode: 3 }),
     ).toEqual({ ...base, type: "DONE", elapsedMs: 1, exitCode: 3 });
     // Anything but an integer exit status is dropped, not trusted.

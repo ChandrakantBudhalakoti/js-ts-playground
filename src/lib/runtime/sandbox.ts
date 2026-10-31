@@ -62,6 +62,11 @@ export interface SandboxRuntimeOptions {
   /** Time a runtime may take to boot once its files are in the sandbox. */
   bootTimeoutMs?: number;
   /**
+   * Time a runtime that compiles in the sandbox (`COMPILES_FIRST`) may take
+   * to compile. The run's own time limit starts when the program does.
+   */
+  compileTimeoutMs?: number;
+  /**
    * How long a finished run's sandbox lingers to deliver late output from
    * async work that timers do not track (promise callbacks, MessageChannel…).
    * Afterwards it is destroyed, so nothing can keep running unbounded.
@@ -77,6 +82,12 @@ export interface SandboxRuntimeOptions {
 
 /** Default for `SandboxRuntimeOptions.settleGraceMs`. */
 export const SETTLE_GRACE_MS = 1_000;
+
+/**
+ * Runtimes whose driver compiles the program inside the sandbox before
+ * running it, and says when the program starts (`DriverHost.started`).
+ */
+const COMPILES_FIRST: ReadonlySet<RuntimeId> = new Set(["java"]);
 
 function formatSize(characters: number): string {
   return characters >= 1_000_000
@@ -108,6 +119,8 @@ interface Sandbox {
   /** The run this sandbox executes once ready; null while pre-warmed. */
   run: PendingRun | null;
   timeoutMs: number;
+  /** The program is still being compiled (`COMPILES_FIRST`). */
+  compiling: boolean;
   assets: Promise<Record<string, ArrayBuffer>> | null;
 }
 
@@ -139,6 +152,7 @@ export class SandboxRuntime {
     this.options = {
       loadTimeoutMs: 10_000,
       bootTimeoutMs: 60_000,
+      compileTimeoutMs: 60_000,
       settleGraceMs: SETTLE_GRACE_MS,
       prewarm: false,
       ...options,
@@ -268,6 +282,7 @@ export class SandboxRuntime {
       timer: undefined,
       run: null,
       timeoutMs: 0,
+      compiling: false,
       assets: null,
     };
     if (runtime !== "js" && runtime !== "wasi") {
@@ -282,7 +297,11 @@ export class SandboxRuntime {
       if (sandbox.phase !== "loading") return;
       this.fail(
         sandbox,
-        "The sandbox did not start. Check the sandbox URL and its Content Security Policy.",
+        // The page the code runs in is kept by the browser's cache, which
+        // can be cleared; it is then needed from the network once more.
+        navigator.onLine
+          ? "The sandbox did not start. Check the sandbox URL and its Content Security Policy."
+          : "Code can't run offline right now: the page it runs in is no longer saved in this browser. Connect to the internet once and run again.",
       );
     }, this.options.loadTimeoutMs);
 
@@ -340,7 +359,11 @@ export class SandboxRuntime {
       },
       run.binary ? [run.binary] : [],
     );
-    sandbox.timer = setTimeout(() => this.onTimeout(sandbox), run.timeoutMs);
+    sandbox.compiling = COMPILES_FIRST.has(sandbox.runtime);
+    sandbox.timer = setTimeout(
+      () => this.onTimeout(sandbox),
+      sandbox.compiling ? this.options.compileTimeoutMs : run.timeoutMs,
+    );
   }
 
   private async onReady(sandbox: Sandbox) {
@@ -426,6 +449,16 @@ export class SandboxRuntime {
     if (sandbox !== this.active) return;
 
     switch (message.type) {
+      case "STARTED":
+        // Compiling is done: the time limit restarts for the program.
+        if (sandbox.phase !== "running" || !sandbox.compiling) return;
+        sandbox.compiling = false;
+        clearTimeout(sandbox.timer);
+        sandbox.timer = setTimeout(
+          () => this.onTimeout(sandbox),
+          sandbox.timeoutMs,
+        );
+        break;
       case "LOG":
         this.emit({
           type: "log",
@@ -488,7 +521,9 @@ export class SandboxRuntime {
     this.emit({
       type: "timeout",
       runId: sandbox.runId,
-      timeoutMs: sandbox.timeoutMs,
+      timeoutMs: sandbox.compiling
+        ? this.options.compileTimeoutMs
+        : sandbox.timeoutMs,
     });
     this.prewarmAfter(sandbox);
   }

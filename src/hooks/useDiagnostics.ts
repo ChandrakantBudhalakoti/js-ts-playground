@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getClangClient } from "@/hooks/useClang";
 import { getCompilerClient } from "@/hooks/useCompiler";
 import { DiagnosticsScheduler } from "@/lib/compiler/diagnostics-scheduler";
+import { downloads } from "@/lib/offline/downloads";
 import { isClangLanguage, isJavaScriptLike } from "@/lib/languages";
 import type { Diagnostic, Language } from "@/types/playground";
 
@@ -15,6 +16,9 @@ function sameDiagnostics(a: Diagnostic[], b: Diagnostic[]): boolean {
 function check(code: string, language: Language): Promise<Diagnostic[]> {
   if (isJavaScriptLike(language))
     return getCompilerClient().check(code, language);
+  // Clang is only downloaded once the user agrees (see DownloadPrompt).
+  if (isClangLanguage(language) && !downloads.isAllowed("clang"))
+    return Promise.resolve([]);
   if (isClangLanguage(language))
     return getClangClient()
       .check(code, language)

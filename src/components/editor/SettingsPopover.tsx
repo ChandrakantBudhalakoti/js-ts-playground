@@ -25,7 +25,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { DownloadedLanguages } from "@/components/editor/DownloadedLanguages";
 import { FONT_SIZES, TIMEOUTS } from "@/hooks/useEditorSettings";
+import { useLocale, useT } from "@/hooks/useLocale";
+import { isLocale, LOCALES, type MessageKey, setLocale } from "@/lib/i18n";
 import type { EditorSettings } from "@/types/playground";
 
 interface SettingsPopoverProps {
@@ -69,15 +72,18 @@ function SwitchRow({
   );
 }
 
-const SHORTCUTS: [string, string][] = [
-  ["Run", "Ctrl/⌘ + Enter"],
-  ["Format", "Shift + Alt + F"],
-  ["Command palette", "F1"],
-  ["Toggle Tab moves focus", "Ctrl + M"],
+const SHORTCUTS: [MessageKey, string][] = [
+  ["settings.shortcutRun", "Ctrl/⌘ + Enter"],
+  ["settings.shortcutFormat", "Shift + Alt + F"],
+  ["settings.shortcutPalette", "F1"],
+  ["settings.shortcutTabFocus", "Ctrl + M"],
 ];
 
 export function SettingsPopover({ settings, onChange }: SettingsPopoverProps) {
   const { theme = "dark", setTheme } = useTheme();
+  const t = useT();
+  const locale = useLocale();
+  const localeId = useId();
   const fontId = useId();
   const timeoutId = useId();
 
@@ -86,17 +92,48 @@ export function SettingsPopover({ settings, onChange }: SettingsPopoverProps) {
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="Settings">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("settings.title")}
+            >
               <Settings aria-hidden />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent>Settings</TooltipContent>
+        <TooltipContent>{t("settings.title")}</TooltipContent>
       </Tooltip>
-      <PopoverContent align="end" className="w-80 p-4">
+      <PopoverContent
+        align="end"
+        collisionPadding={8}
+        className="max-h-(--radix-popover-content-available-height) w-80 overflow-y-auto p-4"
+      >
         <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium">Editor</h2>
-          <Row label="Theme">
+          <Row label={t("settings.interfaceLanguage")} htmlFor={localeId}>
+            <Select
+              value={locale}
+              onValueChange={(value) => isLocale(value) && setLocale(value)}
+            >
+              <SelectTrigger id={localeId} size="sm" className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LOCALES.map((option) => (
+                  <SelectItem
+                    key={option.id}
+                    value={option.id}
+                    lang={option.htmlLang}
+                  >
+                    {option.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Row>
+
+          <Separator className="my-2" />
+          <h2 className="text-sm font-medium">{t("settings.editor")}</h2>
+          <Row label={t("settings.theme")}>
             <ToggleGroup
               type="single"
               size="sm"
@@ -104,20 +141,20 @@ export function SettingsPopover({ settings, onChange }: SettingsPopoverProps) {
               spacing={0}
               value={theme}
               onValueChange={(value) => value && setTheme(value)}
-              aria-label="Theme"
+              aria-label={t("settings.theme")}
             >
               <ToggleGroupItem value="dark" className="px-2 text-xs">
-                Dark
+                {t("settings.dark")}
               </ToggleGroupItem>
               <ToggleGroupItem value="light" className="px-2 text-xs">
-                Light
+                {t("settings.light")}
               </ToggleGroupItem>
               <ToggleGroupItem value="system" className="px-2 text-xs">
-                System
+                {t("settings.system")}
               </ToggleGroupItem>
             </ToggleGroup>
           </Row>
-          <Row label="Font size" htmlFor={fontId}>
+          <Row label={t("settings.fontSize")} htmlFor={fontId}>
             <Select
               value={String(settings.fontSize)}
               onValueChange={(value) => onChange({ fontSize: Number(value) })}
@@ -134,7 +171,7 @@ export function SettingsPopover({ settings, onChange }: SettingsPopoverProps) {
               </SelectContent>
             </Select>
           </Row>
-          <Row label="Tab size">
+          <Row label={t("settings.tabSize")}>
             <ToggleGroup
               type="single"
               size="sm"
@@ -145,7 +182,7 @@ export function SettingsPopover({ settings, onChange }: SettingsPopoverProps) {
                 (value === "2" || value === "4") &&
                 onChange({ tabSize: Number(value) as 2 | 4 })
               }
-              aria-label="Tab size"
+              aria-label={t("settings.tabSize")}
             >
               <ToggleGroupItem value="2" className="px-2.5 text-xs">
                 2
@@ -156,19 +193,19 @@ export function SettingsPopover({ settings, onChange }: SettingsPopoverProps) {
             </ToggleGroup>
           </Row>
           <SwitchRow
-            label="Minimap"
+            label={t("settings.minimap")}
             checked={settings.minimap}
             onCheckedChange={(minimap) => onChange({ minimap })}
           />
           <SwitchRow
-            label="Word wrap"
+            label={t("settings.wordWrap")}
             checked={settings.wordWrap}
             onCheckedChange={(wordWrap) => onChange({ wordWrap })}
           />
 
           <Separator className="my-2" />
-          <h2 className="text-sm font-medium">Execution</h2>
-          <Row label="Time limit" htmlFor={timeoutId}>
+          <h2 className="text-sm font-medium">{t("settings.execution")}</h2>
+          <Row label={t("settings.timeLimit")} htmlFor={timeoutId}>
             <Select
               value={String(settings.timeoutMs)}
               onValueChange={(value) => onChange({ timeoutMs: Number(value) })}
@@ -186,14 +223,14 @@ export function SettingsPopover({ settings, onChange }: SettingsPopoverProps) {
             </Select>
           </Row>
           <SwitchRow
-            label="Block Run on type errors"
+            label={t("settings.blockTypeErrors")}
             checked={settings.blockRunOnTypeErrors}
             onCheckedChange={(blockRunOnTypeErrors) =>
               onChange({ blockRunOnTypeErrors })
             }
           />
           <SwitchRow
-            label="Clear console on Run"
+            label={t("settings.clearConsole")}
             checked={settings.clearConsoleOnRun}
             onCheckedChange={(clearConsoleOnRun) =>
               onChange({ clearConsoleOnRun })
@@ -201,11 +238,22 @@ export function SettingsPopover({ settings, onChange }: SettingsPopoverProps) {
           />
 
           <Separator className="my-2" />
-          <h2 className="text-sm font-medium">Shortcuts</h2>
+          <h2 className="text-sm font-medium">{t("settings.downloads")}</h2>
+          <SwitchRow
+            label={t("settings.askBeforeDownload")}
+            checked={settings.askBeforeDownload}
+            onCheckedChange={(askBeforeDownload) =>
+              onChange({ askBeforeDownload })
+            }
+          />
+          <DownloadedLanguages />
+
+          <Separator className="my-2" />
+          <h2 className="text-sm font-medium">{t("settings.shortcuts")}</h2>
           <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-xs">
             {SHORTCUTS.map(([action, keys]) => (
               <div key={action} className="contents">
-                <dt className="text-muted-foreground">{action}</dt>
+                <dt className="text-muted-foreground">{t(action)}</dt>
                 <dd>
                   <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
                     {keys}

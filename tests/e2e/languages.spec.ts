@@ -33,6 +33,9 @@ const EXPECTED_OUTPUT: Record<string, string> = {
   "cpp-hello": "Total area: 19.0686",
   "cpp-stl": "Sum 1..10 = 55, even numbers: 5",
   "cpp-input": "You listed 3 languages: C++ Python Go",
+  "java-hello": "Hello, Riya! Welcome to Java.",
+  "java-classes": "Kabir: total 231, average 77.0, grade B",
+  "java-input": "Total: 60, largest: 30",
   "go-hello": "Word counts: map[and:1 fast:1 fun:1 go:2 is:2]",
   "go-concurrency": "6 results",
   "go-input": "Total: 10",
@@ -129,6 +132,76 @@ test.describe("errors in other languages", () => {
     await expect(page.getByTestId("problem-item").first()).toContainText(
       "main.c:2:",
     );
+    // A plain-language explanation under it (src/lib/friendly-errors).
+    await expect(
+      page.getByTestId("problems-list").getByTestId("friendly-error").first(),
+    ).toContainText("A semicolon (;) is missing");
+  });
+
+  test("a Python indentation error is explained in plain language", async ({
+    page,
+  }) => {
+    await openPlayground(page, {
+      language: "python",
+      code: "count = 3\n    print(count)\n",
+    });
+    await run(page);
+    await expectStatus(page, "failed", STATUS_TIMEOUT);
+    const error = consoleOutput(page).locator('[data-kind="runtime-error"]');
+    await expect(error).toContainText("IndentationError");
+    await expect(error.getByTestId("friendly-error")).toContainText(
+      "Line 2 has extra spaces at the start",
+    );
+  });
+
+  test("Java compile errors link to their line, with an explanation", async ({
+    page,
+  }) => {
+    await openPlayground(page, {
+      language: "java",
+      code: "public class Main {\n    public static void main(String[] args) {\n        int x = 1\n        System.out.println(x);\n    }\n}\n",
+    });
+    await run(page);
+    await expectStatus(page, "failed", STATUS_TIMEOUT);
+    const error = consoleOutput(page).locator('[data-kind="runtime-error"]');
+    await expect(error).toContainText("';' expected");
+    await expect(
+      error.getByRole("button", { name: /Go to Main\.java line 3/ }),
+    ).toBeVisible();
+    await expect(error.getByTestId("friendly-error")).toContainText(
+      "A semicolon (;) is missing",
+    );
+  });
+
+  test("an uncaught Java exception is reported like Java does", async ({
+    page,
+  }) => {
+    await openPlayground(page, {
+      language: "java",
+      code: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("before");\n        int zero = 0;\n        System.out.println(10 / zero);\n    }\n}\n',
+    });
+    await run(page);
+    await expectStatus(page, "failed", STATUS_TIMEOUT);
+    await expect(loggedLines(page).first()).toContainText("before");
+    const error = consoleOutput(page).locator('[data-kind="runtime-error"]');
+    await expect(error).toContainText("java.lang.ArithmeticException");
+    await expect(error.getByTestId("friendly-error")).toContainText(
+      "divided a whole number by zero",
+    );
+  });
+
+  test("Java's missing printf %f is explained, not a crash", async ({
+    page,
+  }) => {
+    await openPlayground(page, {
+      language: "java",
+      code: 'public class Main {\n    public static void main(String[] args) {\n        System.out.printf("%.2f%n", 3.14159);\n    }\n}\n',
+    });
+    await run(page);
+    await expectStatus(page, "failed", STATUS_TIMEOUT);
+    await expect(
+      consoleOutput(page).locator('[data-kind="runtime-error"]'),
+    ).toContainText("printf and String.format with %f");
   });
 
   test("a C program's exit status fails the run", async ({ page }) => {
@@ -179,6 +252,21 @@ test.describe("errors in other languages", () => {
     await run(page);
     await expectStatus(page, "timed-out", STATUS_TIMEOUT);
     await expect(loggedLines(page)).toContainText(["before the loop"]);
+  });
+
+  test("Java's time limit counts the program, not the compiler", async ({
+    page,
+  }) => {
+    // Compiling takes longer than this limit on a slow machine; the limit
+    // starts when the program does, and still stops the loop.
+    await openPlayground(page, {
+      language: "java",
+      code: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("before the loop");\n        while (true) {}\n    }\n}\n',
+      settings: { timeoutMs: 2_000 },
+    });
+    await run(page);
+    await expectStatus(page, "timed-out", STATUS_TIMEOUT);
+    await expect(consoleOutput(page)).toContainText("before the loop");
   });
 
   test("the sandbox has no network access, even past the worker's fetch replacement", async ({

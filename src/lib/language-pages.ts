@@ -185,6 +185,59 @@ export const LANGUAGE_PAGES: LanguagePage[] = [
     ],
   },
   {
+    language: "java",
+    title: "Online Java Compiler",
+    description:
+      "Compile and run Java online in your browser: classes, objects, arrays, strings and Scanner input from an Input box. Free, works on phones, no install.",
+    lead: "Write Java and run it in your browser, the way ICSE, ISC and college courses teach it: a class with a main method, Scanner reading the Input tab, and compile errors that link to their line. Nothing is installed and your code never leaves your device.",
+    capabilities: [
+      {
+        title: "A real Java compiler",
+        text: "OpenJDK's javac checks and compiles your program, then TeaVM turns it into WebAssembly that runs in the browser. Both download once (about 4.5 MB) and then work offline.",
+      },
+      {
+        title: "Scanner input",
+        text: "new Scanner(System.in) reads the Input tab: nextInt, nextDouble, next, nextLine and hasNextInt work, and InputMismatchException is thrown for text where a number is expected.",
+      },
+      {
+        title: "Classes and objects",
+        text: "Classes, constructors, methods, static members, arrays, 2D arrays, strings, StringBuilder, ArrayList and HashMap, recursion and exceptions with try/catch.",
+      },
+      {
+        title: "Errors with their line",
+        text: "Compile errors such as a missing semicolon link to their line, with a plain-language explanation; uncaught exceptions show their type and message.",
+      },
+    ],
+    available: [
+      "public class Main with public static void main(String[] args) (or any class with a main method)",
+      "Scanner, Math, String, StringBuilder, arrays, ArrayList, HashMap and other java.util collections",
+      "Exceptions with try, catch and finally, and your own exception classes",
+    ],
+    unavailable: [
+      "printf and String.format with %f (decimal places): print with println, or round with Math.round",
+      "BufferedReader and InputStreamReader: read input with Scanner",
+      "Catching an index outside an array (the program stops), threads, files and networking",
+    ],
+    faqs: [
+      {
+        question: "Can I use Scanner to read input?",
+        answer:
+          "Yes. Type the input in the Input tab, then read it with Scanner sc = new Scanner(System.in); and sc.nextInt(), sc.nextLine() and so on.",
+      },
+      {
+        question: "Does my class have to be called Main?",
+        answer:
+          "No. Any class with a public static void main(String[] args) method runs, whatever its name.",
+      },
+      {
+        question: "Why does printf with %.2f not work?",
+        answer:
+          "The browser version of the Java library cannot format decimals yet. Print the number with System.out.println, or round it first: Math.round(x * 100) / 100.0 keeps two decimal places.",
+      },
+      PHONE_FAQ("Java", "4.5 MB"),
+    ],
+  },
+  {
     language: "go",
     title: "Online Go Playground",
     description:

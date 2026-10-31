@@ -58,6 +58,12 @@ export interface DriverHost {
   /** All of standard input, for runtimes that hand it to the program up front. */
   stdinBytes(): Uint8Array;
   reportError(error: DriverError): void;
+  /**
+   * For runtimes that compile inside the sandbox (see `COMPILES_FIRST` in
+   * ../sandbox.ts): call it as the compiled program starts, so the run's time
+   * limit counts the program, not the compiler. Only the first call counts.
+   */
+  started(): void;
 }
 
 export interface Driver {

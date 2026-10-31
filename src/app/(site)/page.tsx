@@ -15,12 +15,14 @@ import { CodePreview } from "@/components/site/CodePreview";
 import { JsonLd } from "@/components/site/JsonLd";
 import { LegacyShareRedirect } from "@/components/site/LegacyShareRedirect";
 import { PlaygroundLink } from "@/components/site/PlaygroundLink";
+import { programListPage } from "@/components/site/ProgramArticle";
 import { FaqList, Section } from "@/components/site/Section";
 import { Button } from "@/components/ui/button";
 import { faqJsonLd, HOME_FAQS } from "@/lib/content";
 import { GUIDES } from "@/lib/guides";
-import { LANGUAGES } from "@/lib/languages";
+import { LANGUAGES, languageInfo } from "@/lib/languages";
 import { pageMetadata } from "@/lib/metadata";
+import { runnableLanguages } from "@/lib/programs";
 import {
   absoluteUrl,
   REPO_URL,
@@ -50,7 +52,7 @@ const FEATURES = [
   {
     icon: Languages,
     title: "Ten languages",
-    text: "Python, C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R, each on its real compiler or interpreter: CPython, Clang, CRuby, PHP, webR and more.",
+    text: "Python, C, C++, Java, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R, each on a real compiler or interpreter: CPython, Clang, javac, CRuby, PHP, webR and more.",
   },
   {
     icon: FileCheck2,
@@ -77,7 +79,7 @@ const FEATURES = [
 const STEPS = [
   {
     title: "Pick a language",
-    text: "Python, C, C++, JavaScript or any of the others. Each opens with a working example to learn from.",
+    text: "Python, C, C++, Java, JavaScript or any of the others. Each opens with a working example to learn from.",
   },
   {
     title: "Write your code",
@@ -93,7 +95,8 @@ const LIMITATIONS = [
   "There are no package managers: each language comes with its standard library, but npm, pip, Go modules and gems can't be installed.",
   "Programs can't open files or use the network.",
   "C++ exceptions are not supported: a throw ends the program with its message.",
-  "The first run of Python, C, C++, Go, Ruby, PHP, Lua or R downloads its runtime once (0.2 to 27 MB).",
+  "The first run of Python, C, C++, Java, Go, Ruby, PHP, Lua or R downloads its runtime once (0.2 to 27 MB): the size is shown first, and you choose. After that it works offline.",
+  "Java reads input with Scanner; printf with %f (decimal places) and BufferedReader are not available in the browser yet.",
   "Each run has a time limit, 5 seconds by default and up to 30 seconds.",
 ];
 
@@ -132,9 +135,9 @@ export default function HomePage() {
             </h1>
             <p className="mt-5 max-w-xl text-lg text-pretty text-muted-foreground">
               {SITE_NAME} is a free online compiler and code editor for Python,
-              C, C++, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R. Write a
-              program, press Run and see what it does. Everything runs in your
-              browser, so all you need is the device you already have.
+              C, C++, Java, JavaScript, TypeScript, Go, Ruby, PHP, Lua and R.
+              Write a program, press Run and see what it does. Everything runs
+              in your browser, so all you need is the device you already have.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="h-11 px-5">
@@ -238,6 +241,26 @@ export default function HomePage() {
           heading="Learn by running examples"
           intro="Each example explains a concept and opens in the playground, ready to run and change."
         >
+          <h3 className="font-medium">Programs for beginners</h3>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            The classic first-year and lab-file programs, from Hello World and
+            star patterns to prime numbers, sorting and recursion, each
+            explained in plain English.
+          </p>
+          <ul className="mt-4 mb-10 flex flex-wrap gap-3">
+            {runnableLanguages().map((language) => (
+              <li key={language}>
+                <Link
+                  href={programListPage(language).path}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors hover:bg-muted/50"
+                >
+                  {languageInfo(language).name} programs
+                  <ArrowRight className="size-4" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <h3 className="mb-4 font-medium">Guided examples</h3>
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {GUIDES.map((guide) => (
               <li key={guide.slug}>

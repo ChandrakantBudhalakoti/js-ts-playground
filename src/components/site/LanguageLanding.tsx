@@ -1,8 +1,11 @@
 import { BookOpen, Play } from "lucide-react";
+import Link from "next/link";
 import { ExampleList } from "@/components/site/ExampleList";
 import { JsonLd } from "@/components/site/JsonLd";
 import { PageHeader } from "@/components/site/PageHeader";
 import { PlaygroundLink } from "@/components/site/PlaygroundLink";
+import { programListPage } from "@/components/site/ProgramArticle";
+import { ProgramList } from "@/components/site/ProgramList";
 import { FaqList, Section } from "@/components/site/Section";
 import { Button } from "@/components/ui/button";
 import { faqJsonLd } from "@/lib/content";
@@ -10,6 +13,7 @@ import { DEFAULT_EXAMPLE, playgroundHref } from "@/lib/examples";
 import { languagePage, type LanguagePage } from "@/lib/language-pages";
 import { languageInfo } from "@/lib/languages";
 import { pageMetadata } from "@/lib/metadata";
+import { programCode, PROGRAMS } from "@/lib/programs";
 
 export function languagePageMetadata(language: LanguagePage["language"]) {
   const page = languagePage(language);
@@ -99,6 +103,27 @@ export function LanguageLanding({
       >
         <ExampleList language={language} />
       </Section>
+
+      {PROGRAMS.some((program) => programCode(program, language)) && (
+        <Section
+          id="programs"
+          heading={`${info.name} programs for beginners`}
+          intro={
+            <p>
+              The classic programs from first-year courses, each explained in
+              plain English.{" "}
+              <Link
+                href={programListPage(language).path}
+                className="font-medium text-foreground hover:underline"
+              >
+                All {info.name} programs
+              </Link>
+            </p>
+          }
+        >
+          <ProgramList language={language} />
+        </Section>
+      )}
 
       <Section id="faq" heading={`${info.name} FAQ`}>
         <FaqList faqs={page.faqs} />

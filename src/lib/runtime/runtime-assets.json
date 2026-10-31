@@ -60,6 +60,18 @@
       }
     }
   },
+  "java": {
+    "package": "teavm-javac (runtimes/java)",
+    "path": "runtimes/java",
+    "version": "playground-3.1",
+    "files": {
+      "compiler.wasm": "compiler.wasm",
+      "compiler.wasm-runtime.js": "compiler.wasm-runtime.js",
+      "runtime-classlib-teavm.bin": "runtime-classlib-teavm.bin",
+      "sdk.bin": "sdk.bin",
+      "extra-classes.bin": "extra-classes.bin"
+    }
+  },
   "clang": {
     "package": "@yowasp/clang",
     "version": "22.0.0-git20542-10",

@@ -7,12 +7,16 @@ import {
   Loader2,
   TriangleAlert,
 } from "lucide-react";
+import { FriendlyError } from "@/components/console/FriendlyError";
+import { useT } from "@/hooks/useLocale";
 import type { ToolingStatus } from "@/hooks/useToolingStatus";
 import { cn } from "@/lib/utils";
-import type { Diagnostic } from "@/types/playground";
+import type { Diagnostic, Language } from "@/types/playground";
 
 interface ProblemsPanelProps {
   diagnostics: Diagnostic[];
+  /** The current language (for explanations of common errors). */
+  language: Language;
   /** The checker of the current language (TypeScript or Clang). */
   tooling: ToolingStatus;
   /**
@@ -48,13 +52,13 @@ function EmptyState({
   tooling: ToolingStatus;
   uncheckedLanguage: string | null;
 }) {
+  const t = useT();
   if (uncheckedLanguage) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-1 p-6 text-center text-sm text-muted-foreground">
         <Info className="size-4 opacity-70" aria-hidden />
         <p className="max-w-md">
-          {uncheckedLanguage} code is checked when it runs: errors appear in the
-          Console, with a link to the line.
+          {t("problems.unchecked", { name: uncheckedLanguage })}
         </p>
       </div>
     );
@@ -63,12 +67,19 @@ function EmptyState({
     return (
       <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" aria-hidden />
-        Loading the {tooling.label} checker…
+        {t("problems.loading", { name: tooling.label })}
         {tooling.progress !== null && (
           <span className="tabular-nums">
             {Math.round(tooling.progress * 100)}%
           </span>
         )}
+      </div>
+    );
+  }
+  if (tooling.status === "download") {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+        {t("problems.download", { name: tooling.label })}
       </div>
     );
   }
@@ -79,7 +90,7 @@ function EmptyState({
         className="flex h-full flex-col items-center justify-center gap-1 p-6 text-center text-sm"
       >
         <p className="font-medium text-amber-700 dark:text-amber-300">
-          Checking is unavailable.
+          {t("problems.unavailable")}
         </p>
         <p className="max-w-md text-muted-foreground">{tooling.message}</p>
       </div>
@@ -91,13 +102,14 @@ function EmptyState({
         className="size-4 text-emerald-600 dark:text-emerald-400"
         aria-hidden
       />
-      No problems detected.
+      {t("problems.none")}
     </div>
   );
 }
 
 export function ProblemsPanel({
   diagnostics,
+  language,
   tooling,
   uncheckedLanguage,
   onSelect,
@@ -150,6 +162,16 @@ export function ProblemsPanel({
                 {location}
               </span>
             </button>
+            {/* Outside the button: the explanation is not part of its name. */}
+            {diagnostic.tool === "clang" && (
+              <div className="px-3 pb-1.5 pl-9">
+                <FriendlyError
+                  language={language}
+                  error={diagnostic.message}
+                  line={diagnostic.startLine}
+                />
+              </div>
+            )}
           </li>
         );
       })}

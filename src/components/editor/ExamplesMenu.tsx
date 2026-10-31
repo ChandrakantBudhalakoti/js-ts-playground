@@ -1,6 +1,12 @@
 "use client";
 
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,8 +18,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EXAMPLES } from "@/lib/examples";
+import { useT } from "@/hooks/useLocale";
+import { EXAMPLES, findExample, isProgramExample } from "@/lib/examples";
 import { isJavaScriptLike, LANGUAGES, languageInfo } from "@/lib/languages";
+import {
+  PROGRAM_TOPICS,
+  programCode,
+  programExampleId,
+  PROGRAMS,
+} from "@/lib/programs";
 import type { CodeExample, Language } from "@/types/playground";
 
 interface ExamplesMenuProps {
@@ -45,20 +58,73 @@ function ExampleItem({
 function ExampleGroup({
   language,
   onSelect,
+  onBrowsePrograms,
 }: {
   language: Language;
   onSelect: (example: CodeExample) => void;
+  onBrowsePrograms: (language: Language) => void;
 }) {
+  const t = useT();
+  const programs = programsIn(language);
   return (
     <DropdownMenuGroup>
       <DropdownMenuLabel className="text-xs text-muted-foreground">
         {languageInfo(language).name}
       </DropdownMenuLabel>
-      {EXAMPLES.filter((e) => e.language === language).map((example) => (
+      {EXAMPLES.filter(
+        (e) => e.language === language && !isProgramExample(e),
+      ).map((example) => (
         <ExampleItem key={example.id} example={example} onSelect={onSelect} />
       ))}
+      {programs.length > 0 && (
+        <DropdownMenuItem
+          // Stay open and list the programs in the same panel.
+          onSelect={(event) => {
+            event.preventDefault();
+            onBrowsePrograms(language);
+          }}
+        >
+          <GraduationCap aria-hidden />
+          {t("examples.beginnerPrograms", { count: programs.length })}
+          <ChevronRight className="ml-auto opacity-60" aria-hidden />
+        </DropdownMenuItem>
+      )}
     </DropdownMenuGroup>
   );
+}
+
+/** A language's beginner programs (src/lib/programs), in syllabus order. */
+function programsIn(language: Language) {
+  return PROGRAMS.flatMap((program) => {
+    const example = programCode(program, language)
+      ? findExample(programExampleId(program, language))
+      : undefined;
+    return example ? [{ program, example }] : [];
+  });
+}
+
+function ProgramGroups({
+  language,
+  onSelect,
+}: {
+  language: Language;
+  onSelect: (example: CodeExample) => void;
+}) {
+  const programs = programsIn(language);
+  return PROGRAM_TOPICS.map((topic) => {
+    const inTopic = programs.filter(({ program }) => program.topic === topic);
+    if (inTopic.length === 0) return null;
+    return (
+      <DropdownMenuGroup key={topic}>
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          {topic}
+        </DropdownMenuLabel>
+        {inTopic.map(({ example }) => (
+          <ExampleItem key={example.id} example={example} onSelect={onSelect} />
+        ))}
+      </DropdownMenuGroup>
+    );
+  });
 }
 
 /**
@@ -74,13 +140,22 @@ export function ExamplesMenu({ language, onSelect }: ExamplesMenuProps) {
   const others = LANGUAGES.filter((info) => !primary.includes(info.id));
   /** The other language being browsed, if any. */
   const [browsing, setBrowsing] = useState<Language | null>(null);
+  /** The language whose beginner programs are listed, if any. */
+  const [programs, setPrograms] = useState<Language | null>(null);
+  const t = useT();
 
   return (
-    <DropdownMenu onOpenChange={(open) => !open && setBrowsing(null)}>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) return;
+        setBrowsing(null);
+        setPrograms(null);
+      }}
+    >
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" aria-label="Examples">
+        <Button variant="ghost" size="sm" aria-label={t("examples.button")}>
           <BookOpen aria-hidden />
-          <span className="hidden sm:inline">Examples</span>
+          <span className="hidden sm:inline">{t("examples.button")}</span>
           <ChevronDown className="hidden opacity-60 sm:inline" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
@@ -89,7 +164,25 @@ export function ExamplesMenu({ language, onSelect }: ExamplesMenuProps) {
         collisionPadding={8}
         className="max-h-(--radix-dropdown-menu-content-available-height) w-[min(20rem,calc(100vw-1rem))] overflow-y-auto"
       >
-        {browsing ? (
+        {programs ? (
+          <>
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                setPrograms(null);
+              }}
+              className="text-muted-foreground"
+            >
+              <ChevronLeft aria-hidden />
+              {t("examples.ofLanguage", { name: languageInfo(programs).name })}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>
+              {t("examples.programsFor", { name: languageInfo(programs).name })}
+            </DropdownMenuLabel>
+            <ProgramGroups language={programs} onSelect={onSelect} />
+          </>
+        ) : browsing ? (
           <>
             <DropdownMenuItem
               onSelect={(event) => {
@@ -99,19 +192,28 @@ export function ExamplesMenu({ language, onSelect }: ExamplesMenuProps) {
               className="text-muted-foreground"
             >
               <ChevronLeft aria-hidden />
-              All languages
+              {t("examples.allLanguages")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <ExampleGroup language={browsing} onSelect={onSelect} />
+            <ExampleGroup
+              language={browsing}
+              onSelect={onSelect}
+              onBrowsePrograms={setPrograms}
+            />
           </>
         ) : (
           <>
             {primary.map((id) => (
-              <ExampleGroup key={id} language={id} onSelect={onSelect} />
+              <ExampleGroup
+                key={id}
+                language={id}
+                onSelect={onSelect}
+                onBrowsePrograms={setPrograms}
+              />
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Other languages
+              {t("examples.otherLanguages")}
             </DropdownMenuLabel>
             {others.map((info) => (
               <DropdownMenuItem
@@ -121,7 +223,7 @@ export function ExamplesMenu({ language, onSelect }: ExamplesMenuProps) {
                   event.preventDefault();
                   setBrowsing(info.id);
                 }}
-                aria-label={`${info.name} examples`}
+                aria-label={t("examples.ofLanguage", { name: info.name })}
               >
                 {info.name}
                 <ChevronRight className="ml-auto opacity-60" aria-hidden />

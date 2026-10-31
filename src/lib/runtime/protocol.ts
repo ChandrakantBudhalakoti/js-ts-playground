@@ -226,6 +226,8 @@ export function parseRuntimeMessage(
     }
     case "BOOTED":
       return { channel, type: "BOOTED", runId, elapsedMs };
+    case "STARTED":
+      return { channel, type: "STARTED", runId, elapsedMs };
     case "LIMIT":
       return isString(data.reason, 500)
         ? { channel, type: "LIMIT", runId, reason: data.reason }

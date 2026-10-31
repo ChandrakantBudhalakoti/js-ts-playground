@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   timeoutMs: 5_000,
   blockRunOnTypeErrors: false,
   clearConsoleOnRun: true,
+  askBeforeDownload: true,
 };
 
 export const FONT_SIZES = [12, 13, 14, 15, 16, 18, 20] as const;
@@ -26,39 +27,48 @@ function parseSettings(value: unknown): EditorSettings | null {
     fallback: T,
   ): T => (valid(candidate) ? candidate : fallback);
   const isBoolean = (x: unknown): x is boolean => typeof x === "boolean";
+  // A setting missing from what was saved (one added later) gets this
+  // device's default, as if nothing had been saved.
+  const defaults = deviceDefaults();
   return {
     fontSize: pick(
       v.fontSize,
       (x): x is number => FONT_SIZES.includes(x as never),
-      DEFAULT_SETTINGS.fontSize,
+      defaults.fontSize,
     ),
     tabSize: pick(
       v.tabSize,
       (x): x is 2 | 4 => x === 2 || x === 4,
-      DEFAULT_SETTINGS.tabSize,
+      defaults.tabSize,
     ),
-    minimap: pick(v.minimap, isBoolean, DEFAULT_SETTINGS.minimap),
-    wordWrap: pick(v.wordWrap, isBoolean, DEFAULT_SETTINGS.wordWrap),
+    minimap: pick(v.minimap, isBoolean, defaults.minimap),
+    wordWrap: pick(v.wordWrap, isBoolean, defaults.wordWrap),
     timeoutMs: pick(
       v.timeoutMs,
       (x): x is number => TIMEOUTS.includes(x as never),
-      DEFAULT_SETTINGS.timeoutMs,
+      defaults.timeoutMs,
     ),
     blockRunOnTypeErrors: pick(
       v.blockRunOnTypeErrors,
       isBoolean,
-      DEFAULT_SETTINGS.blockRunOnTypeErrors,
+      defaults.blockRunOnTypeErrors,
     ),
     clearConsoleOnRun: pick(
       v.clearConsoleOnRun,
       isBoolean,
-      DEFAULT_SETTINGS.clearConsoleOnRun,
+      defaults.clearConsoleOnRun,
+    ),
+    askBeforeDownload: pick(
+      v.askBeforeDownload,
+      isBoolean,
+      defaults.askBeforeDownload,
     ),
   };
 }
 
 /** Phones wrap long lines by default: scrolling sideways is awkward there. */
 function deviceDefaults(): EditorSettings {
+  if (typeof window === "undefined") return DEFAULT_SETTINGS;
   return window.matchMedia("(max-width: 639px)").matches
     ? { ...DEFAULT_SETTINGS, wordWrap: true }
     : DEFAULT_SETTINGS;

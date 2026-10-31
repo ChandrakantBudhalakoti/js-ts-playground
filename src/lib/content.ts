@@ -34,6 +34,16 @@ export const HOME_FAQS: Faq[] = [
       "Yes. It is free to use, needs no account, and the source code is open under the MIT license.",
   },
   {
+    question: "Is it available in Hindi?",
+    answer:
+      "Yes. The playground starts in English, and the हिं / EN button in the editor's toolbar switches it to Hindi and back; Settings also offers Hinglish (Hindi in Latin letters). When a program fails, a short explanation of common errors appears under the real error message in the language you chose. Your code and its output are never translated.",
+  },
+  {
+    question: "Does it work offline?",
+    answer:
+      "Yes, once you have used it. The playground and every language you have run are saved in your browser, so they keep working without internet. Before a language is downloaded the first time, you see its size and choose (handy on mobile data), and Settings lists the saved languages so you can remove one to free space.",
+  },
+  {
     question: "Does it work on a phone or tablet?",
     answer:
       "Yes, it is designed for them. The editor, the output and the input each get the full screen, buttons are big enough to tap, and a row of code keys gives you brackets, symbols, Tab and the arrow keys. A recent version of Chrome, Edge or Firefox is all you need, and you can add it to your home screen like an app.",
@@ -46,7 +56,12 @@ export const HOME_FAQS: Faq[] = [
   {
     question: "Which languages can I run?",
     answer:
-      "JavaScript and TypeScript, plus Python, C, C++, Go, Ruby, PHP, Lua and R. Those run on WebAssembly builds of their usual implementations: CPython, Clang, the Yaegi Go interpreter, CRuby, PHP, Lua and webR. Programs that read standard input get the text of the Input tab.",
+      "JavaScript and TypeScript, plus Python, C, C++, Java, Go, Ruby, PHP, Lua and R. Those run on WebAssembly builds of their usual implementations: CPython, Clang, OpenJDK's javac with TeaVM, the Yaegi Go interpreter, CRuby, PHP, Lua and webR. Programs that read standard input get the text of the Input tab.",
+  },
+  {
+    question: "Are there programs for beginners?",
+    answer:
+      "Yes. The examples include the classic first-year and lab-file programs (Hello World, even or odd, star patterns, Floyd's triangle, prime numbers, factorial, Fibonacci, palindromes, Armstrong numbers, arrays, sorting, strings, functions and recursion) in Python, C, C++ and Java. Each one is explained in plain English and opens in the playground with its sample input ready.",
   },
   {
     question: "Is my code sent to a server?",

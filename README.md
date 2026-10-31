@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/ChandrakantBudhalakoti/js-ts-playground/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A free, open-source online code editor and compiler for Python, C, C++,
+A free, open-source online code editor and compiler for Python, C, C++, Java,
 JavaScript, TypeScript, Go, Ruby, PHP, Lua and R, built first for phones and
 tablets, so anyone can learn to code without a laptop. Write code in a VS
 Code-style editor (Monaco), get autocomplete and real TypeScript type checking
@@ -21,9 +21,9 @@ and the browser storage keys keep the original name, so existing links and
 saved drafts still work. The display name is `SITE_NAME` and the canonical
 address `SITE_URL`, both in `src/lib/site.ts`.
 
-**[Live demo: code-slatee.vercel.app](https://code-slatee.vercel.app/)**
-· [Open the editor](https://code-slatee.vercel.app/playground)
-· [Examples](https://code-slatee.vercel.app/examples)
+**[Live demo: codetakhti.vercel.app](https://codetakhti.vercel.app/)**
+· [Open the editor](https://codetakhti.vercel.app/playground)
+· [Examples](https://codetakhti.vercel.app/examples)
 
 ![CodeTakhti running a Python example: code in the editor, and the console below showing its output and "Completed in 18 ms"](docs/images/playground.png)
 
@@ -42,8 +42,8 @@ address `SITE_URL`, both in `src/lib/site.ts`.
   diagnostic, matching the editor's squiggles. Click one to jump to it. C and
   C++ are checked by Clang as you type. Other languages report errors when
   they run, with a link to the failing line.
-- **Ten languages:** JavaScript and TypeScript run natively; Python, C, C++,
-  Go, Ruby, PHP, Lua and R run on WebAssembly builds of their usual
+- **Eleven languages:** JavaScript and TypeScript run natively; Python, C,
+  C++, Java, Go, Ruby, PHP, Lua and R run on WebAssembly builds of their usual
   interpreters and compilers (see [Languages](#languages)). Each one is
   downloaded the first time you pick it.
 - **Sandboxed execution:** a sandboxed iframe with an opaque origin runs your
@@ -57,6 +57,36 @@ address `SITE_URL`, both in `src/lib/site.ts`.
 - **Examples:** runnable examples for every language in the editor's
   Examples menu. Any of them opens directly at `/playground?example=<id>`, and
   five have guide pages that explain them.
+- **Beginner programs:** the classic first-year syllabus and lab-file
+  programs (Hello World, input and output, even/odd, star patterns, Floyd's
+  triangle, prime numbers, factorial, Fibonacci, palindromes, Armstrong
+  numbers, arrays, linear search, bubble sort, matrix addition, strings,
+  functions, recursion) in Python, C, C++ and Java, each with a plain-English
+  explanation, sample input already in the Input tab, and its output. Each has
+  its own page, such as `/examples/java/star-pattern-pyramid`, and the
+  examples page filters by language and level.
+- **Offline and data-friendly:** a service worker saves the app, the editor,
+  the TypeScript compiler and each language runtime the first time they are
+  used, so anything used once works without internet. Before a language's
+  first download the console shows its size (and notes mobile data, Data
+  Saver or a slow connection) with Download and Cancel; nothing is ever
+  downloaded twice. Settings → Downloaded languages lists what is saved, with
+  sizes, and removes a language to free space. An Offline badge shows when
+  there is no connection.
+- **Hindi and Hinglish:** everyone starts in English; the **हिं / EN** button
+  in the toolbar (on every screen size) switches the interface to Hindi
+  (हिन्दी) and back, and Settings also offers Hinglish (Hindi in Latin
+  script). The choice is remembered. Code and program output are never
+  translated; the site's articles stay in English.
+- **Friendly error explanations:** under the most common beginner errors
+  (Python indentation, missing colons, NameError, adding text and numbers,
+  `int(input())` on text, index errors, division by zero, empty input; C and
+  C++ missing semicolons, undeclared names, missing `#include`, `scanf`
+  without `&`, missing return types, arrays out of bounds, `cin` misuse;
+  timeouts in every language), a short explanation in plain English, Hindi or
+  Hinglish, with a link to the line. The original error always stays visible.
+  The rules are data (`src/lib/friendly-errors/rules.ts`), and Java's are
+  ready for when Java runs.
 - **Sharing and drafts:** share links keep the code (and the input)
   compressed in the URL hash (no server storage), and your draft is saved in
   the browser.
@@ -95,6 +125,7 @@ the app downloads from its own origin the first time you pick the language
 | Python     | CPython 3.14 ([Pyodide](https://pyodide.org))                               | 7 MB           | yes   | –                     |
 | C          | Clang 22 → WASI ([YoWASP](https://yowasp.org)), C17                         | 27 MB          | yes   | Clang                 |
 | C++        | Clang 22 → WASI, C++20 with libc++                                          | 27 MB          | yes   | Clang                 |
+| Java       | OpenJDK `javac` + [TeaVM](https://teavm.org) → WebAssembly (Java 21)        | 4.5 MB         | yes   | –                     |
 | Go         | [Yaegi](https://github.com/traefik/yaegi) Go interpreter                    | 9 MB           | yes   | –                     |
 | Ruby       | CRuby 3.4 ([ruby.wasm](https://github.com/ruby/ruby.wasm))                  | 9 MB           | yes   | –                     |
 | PHP        | PHP 8.4 CLI ([php-wasm](https://github.com/WordPress/wordpress-playground)) | 8 MB           | yes   | –                     |
@@ -106,6 +137,14 @@ What to expect from each:
 - **Python:** the standard library only (no `pip`, no NumPy). `input()` reads
   the Input tab; `print` output appears as it is printed. Tracebacks keep only
   your own frames and link to the failing line.
+- **Java:** OpenJDK's `javac` and TeaVM, both compiled to WebAssembly, turn
+  the program into WebAssembly in the sandbox on each run (a second or two;
+  WasmGC, so Chrome 119, Firefox 120 or Safari 18.2 and newer). Any class with
+  `main` runs. `Scanner` reads the Input tab; compile errors link to their
+  line; uncaught exceptions show their type and message. Not available yet:
+  `printf`/`String.format` with `%f`, `BufferedReader` with
+  `InputStreamReader`, and catching an index outside an array. See
+  `runtimes/java/README.md`.
 - **C and C++:** Clang compiles to WebAssembly in a worker of the app, so the
   first C++ compile of a session takes a few seconds (the standard headers
   are large). Compile errors and warnings (`-Wall`) appear in the Problems
@@ -128,17 +167,19 @@ starts in the background, so later runs don't wait for the runtime to boot.
 
 ## Pages
 
-| Route                                                         | What it is                                                                                 |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `/`                                                           | Landing page: features, how it works, limitations, FAQ                                     |
-| `/playground`                                                 | The editor. `?example=<id>` opens an example; `#lang=…&code=…` is a share link             |
-| `/languages`                                                  | Every language, grouped, with links to its page and the editor                             |
-| `/javascript`, `/typescript`                                  | What each language supports, the runtime environment, compiler settings and examples       |
-| `/python`, `/c`, `/cpp`, `/go`, `/ruby`, `/php`, `/lua`, `/r` | What runs and what doesn't, the runtime, examples and an FAQ (`src/lib/language-pages.ts`) |
-| `/manifest.webmanifest`, `/icon/<id>`, `/apple-icon/<id>`     | Web app manifest and generated app icons                                                   |
-| `/examples`, `/examples/<slug>`                               | All examples, and guides for async/await, array methods, promises, interfaces and generics |
-| `/sandbox`                                                    | The page the code runs in (framed by the editor, `X-Robots-Tag: noindex`)                  |
-| `/sitemap.xml`, `/robots.txt`, `/opengraph-image`             | Generated sitemap, robots rules and social-sharing image                                   |
+| Route                                                                  | What it is                                                                                                                |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                                                    | Landing page: features, how it works, limitations, FAQ                                                                    |
+| `/playground`                                                          | The editor. `?example=<id>` opens an example; `#lang=…&code=…` is a share link                                            |
+| `/languages`                                                           | Every language, grouped, with links to its page and the editor                                                            |
+| `/javascript`, `/typescript`                                           | What each language supports, the runtime environment, compiler settings and examples                                      |
+| `/python`, `/c`, `/cpp`, `/java`, `/go`, `/ruby`, `/php`, `/lua`, `/r` | What runs and what doesn't, the runtime, examples and an FAQ (`src/lib/language-pages.ts`)                                |
+| `/manifest.webmanifest`, `/icon/<id>`, `/apple-icon/<id>`              | Web app manifest and generated app icons                                                                                  |
+| `/examples`, `/examples/<slug>`                                        | All examples (filter by language and level), and guides for async/await, array methods, promises, interfaces and generics |
+| `/examples/<language>`, `/examples/<language>/<program>`               | Beginner programs per language (`/examples/python`), and one page per program (`/examples/c/prime-number`)                |
+| `/sandbox`                                                             | The page the code runs in (framed by the editor, `X-Robots-Tag: noindex`)                                                 |
+| `/sw.js`                                                               | The service worker that keeps the app and used languages working offline (`src/lib/offline/service-worker.ts`)            |
+| `/sitemap.xml`, `/robots.txt`, `/opengraph-image`                      | Generated sitemap, robots rules and social-sharing image                                                                  |
 
 Share links created before the editor moved to `/playground` point at
 `/#lang=…&code=…`; the home page forwards them, so they keep working.
@@ -241,7 +282,7 @@ src/
     clang/                    Clang worker, its client and diagnostics parser (C/C++)
     runtime/                  Sandbox document, parent runtime, protocol validation, serializer
       runtime-worker.ts         Worker for non-JavaScript languages: virtual network, stdio
-      drivers/                  One driver per runtime (Python, Lua, Ruby, PHP, Go, R, WASI)
+      drivers/                  One driver per runtime (Python, Lua, Ruby, PHP, Go, R, Java, WASI)
       assets.ts                 Downloads and caches runtime files
       runtime-assets.json       Runtime packages, versions and files (also read by the build)
     languages.ts              The language registry (names, files, runtimes, share codes)
@@ -250,12 +291,13 @@ src/
     sharing/encode-code.ts    URL-hash share links
     examples.ts, guides.ts    Runnable examples and the guide pages that explain them
     language-examples.ts      Examples for the WebAssembly languages
+    programs/                 Beginner programs: one file per program, every language (topics/)
     site.ts, metadata.ts      Canonical URL, site name, per-page metadata helper
     content.ts                Landing-page FAQ and copy shared with structured data
   types/playground.ts         Shared types (Language, Diagnostic, ConsoleEntry, RuntimeMessage, ...)
 tests/
   unit/                       Compiler, diagnostics, serializer, protocol, sandbox scripts, runtime worker, languages, sharing, sitemap and content
-  e2e/                        Editor, runtime, every language's examples, sharing, phone and tablet, guides, SEO metadata and accessibility (axe)
+  e2e/                        Editor, runtime, every language's examples and beginner programs, sharing, phone and tablet, guides, SEO metadata and accessibility (axe)
 ```
 
 Links into and out of `/playground` are plain `<a>` elements (full page
@@ -306,6 +348,26 @@ type errors_ to make type errors block too.
 Limits (in `src/lib/runtime/protocol.ts`): 1,000 console messages per run
 (after that the run is stopped), 128 KB per message, 10,000 characters per
 string, and bounded depth and item counts for objects.
+
+### Offline
+
+`/sw.js` (`src/lib/offline/service-worker.ts`) caches the app shell per build,
+and Monaco, the TypeScript libraries and each language runtime per version
+(their paths are versioned), so a new version replaces the old files and
+anything used once keeps working without a connection. Pages are fetched
+from the network first; versioned files come from the cache first.
+
+Once a runtime's download finishes, the worker checks that every file in its
+`index.json` is cached and marks it complete; only then does it count as
+downloaded (`src/lib/offline/downloads.ts`), and the console asks before the
+first download of any runtime that isn't. Settings → Downloaded languages
+deletes a runtime's cache.
+
+Browsers don't let a service worker serve a sandboxed (opaque-origin) frame,
+so the sandbox page is requested as `/sandbox?v=<build>` and served with
+`Cache-Control: immutable`: the browser's HTTP cache keeps it for offline runs.
+If that cache is cleared, the next offline run says so and asks for a
+connection once.
 
 ### Other languages
 
@@ -419,11 +481,11 @@ bundle.
 
 Optional build-time environment variables:
 
-| Variable                   | Purpose                                                                                                                                                                                                                              |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `NEXT_PUBLIC_SITE_URL`     | Canonical origin for canonical links, og:url, the sitemap, robots.txt and structured data. Defaults to `https://code-slatee.vercel.app` (`SITE_URL` in `src/lib/site.ts`). Set it on a fork or self-hosted copy with its own domain. |
-| `GOOGLE_SITE_VERIFICATION` | Token for Google Search Console's HTML-tag verification; adds `<meta name="google-site-verification">`.                                                                                                                              |
-| `NEXT_PUBLIC_SANDBOX_URL`  | Separate sandbox origin (see above).                                                                                                                                                                                                 |
+| Variable                   | Purpose                                                                                                                                                                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`     | Canonical origin for canonical links, og:url, the sitemap, robots.txt and structured data. Defaults to `https://codetakhti.vercel.app` (`SITE_URL` in `src/lib/site.ts`). Set it on a fork or self-hosted copy with its own domain. |
+| `GOOGLE_SITE_VERIFICATION` | Token for Google Search Console's HTML-tag verification; adds `<meta name="google-site-verification">`.                                                                                                                             |
+| `NEXT_PUBLIC_SANDBOX_URL`  | Separate sandbox origin (see above).                                                                                                                                                                                                |
 
 ### Self-hosting
 
@@ -464,7 +526,7 @@ A `*.vercel.app` subdomain can't be verified through DNS, so use a
 **URL-prefix** property with the **HTML tag** method:
 
 1. In [Search Console](https://search.google.com/search-console), add a
-   URL-prefix property for `https://code-slatee.vercel.app/` and
+   URL-prefix property for `https://codetakhti.vercel.app/` and
    choose _HTML tag_. Copy only the `content` value of the tag.
 2. In Vercel, under _Project → Settings → Environment Variables_, add
    `GOOGLE_SITE_VERIFICATION` with that value for _Production_, then redeploy

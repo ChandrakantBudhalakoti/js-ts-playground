@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getAssetCache } from "@/hooks/useRuntimeAssets";
 import { createPositionMapper } from "@/lib/compiler/source-map";
+import { t } from "@/lib/i18n";
 import {
   appendEntries,
   createErrorEntry,
@@ -103,7 +104,7 @@ export function useCodeExecution(sandboxUrl: string) {
 
       switch (event.type) {
         case "booting":
-          system("debug", `Starting ${context.runtimeName}…`);
+          system("debug", t("run.starting", { name: context.runtimeName }));
           break;
         case "log":
           push(
@@ -130,20 +131,23 @@ export function useCodeExecution(sandboxUrl: string) {
           const exitCode = event.exitCode ?? 0;
           const failed = context.hadError || exitCode !== 0;
           if (event.inputMissing)
-            system(
-              "info",
-              "The program read standard input, but the Input panel is empty.",
-              event.elapsedMs,
-            );
+            system("info", t("run.inputEmpty"), event.elapsedMs);
           setStatus(failed ? "failed" : "completed");
           setDurationMs(event.elapsedMs);
           system(
             "debug",
             context.hadError
-              ? `Finished with errors in ${formatDuration(event.elapsedMs)}`
+              ? t("run.finishedWithErrors", {
+                  duration: formatDuration(event.elapsedMs),
+                })
               : exitCode !== 0
-                ? `Exited with code ${exitCode} after ${formatDuration(event.elapsedMs)}`
-                : `Completed in ${formatDuration(event.elapsedMs)}`,
+                ? t("run.exited", {
+                    code: exitCode,
+                    duration: formatDuration(event.elapsedMs),
+                  })
+                : t("run.completed", {
+                    duration: formatDuration(event.elapsedMs),
+                  }),
             event.elapsedMs,
             failed ? undefined : "success",
           );
@@ -151,15 +155,20 @@ export function useCodeExecution(sandboxUrl: string) {
         }
         case "timeout":
           setStatus("timed-out");
-          system(
-            "error",
-            `Execution timed out after ${formatDuration(event.timeoutMs)}. The sandbox was terminated. ` +
-              "Check for infinite loops, or raise the time limit in Settings.",
-          );
+          push({
+            ...createSystemEntry(
+              id(),
+              context.runId,
+              "error",
+              t("run.timedOut", { duration: formatDuration(event.timeoutMs) }),
+            ),
+            fileName: context.fileName,
+            explain: "timed out after",
+          });
           break;
         case "stopped":
           setStatus("stopped");
-          system("warn", "Execution stopped.");
+          system("warn", t("run.stopped"));
           break;
         case "limit":
           setStatus("failed");
@@ -216,7 +225,7 @@ export function useCodeExecution(sandboxUrl: string) {
         runtimeName: request.runtimeName,
       };
       if (!request.clearConsole)
-        push(createSystemEntry(id(), runId, "debug", "Run started"));
+        push(createSystemEntry(id(), runId, "debug", t("run.started")));
       for (const notice of request.notices ?? []) {
         push(createSystemEntry(id(), runId, notice.level, notice.message));
       }

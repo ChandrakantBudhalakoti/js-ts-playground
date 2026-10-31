@@ -8,39 +8,45 @@ import {
   Loader2,
   TimerOff,
 } from "lucide-react";
+import { useT } from "@/hooks/useLocale";
+import type { MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { ExecutionStatus } from "@/types/playground";
 
 const STATUS = {
-  idle: { label: "Idle", icon: CircleDot, className: "text-muted-foreground" },
+  idle: {
+    label: "status.idle",
+    icon: CircleDot,
+    className: "text-muted-foreground",
+  },
   running: {
-    label: "Running",
+    label: "status.running",
     icon: Loader2,
     className: "text-sky-600 dark:text-sky-400",
   },
   completed: {
-    label: "Completed",
+    label: "status.completed",
     icon: CircleCheck,
     className: "text-emerald-600 dark:text-emerald-400",
   },
   failed: {
-    label: "Failed",
+    label: "status.failed",
     icon: CircleX,
     className: "text-red-600 dark:text-red-400",
   },
   "timed-out": {
-    label: "Timed out",
+    label: "status.timedOut",
     icon: TimerOff,
     className: "text-amber-600 dark:text-amber-400",
   },
   stopped: {
-    label: "Stopped",
+    label: "status.stopped",
     icon: CircleSlash,
     className: "text-muted-foreground",
   },
 } satisfies Record<
   ExecutionStatus,
-  { label: string; icon: typeof CircleDot; className: string }
+  { label: MessageKey; icon: typeof CircleDot; className: string }
 >;
 
 function formatDuration(ms: number): string {
@@ -55,6 +61,7 @@ export function ExecutionStatusBadge({
   status: ExecutionStatus;
   durationMs: number | null;
 }) {
+  const t = useT();
   const { label, icon: Icon, className } = STATUS[status];
   return (
     <div
@@ -71,7 +78,7 @@ export function ExecutionStatusBadge({
         className={cn("size-3.5", status === "running" && "animate-spin")}
         aria-hidden
       />
-      <span className="sr-only sm:not-sr-only">{label}</span>
+      <span className="sr-only sm:not-sr-only">{t(label)}</span>
       {durationMs !== null &&
         (status === "completed" || status === "failed") && (
           <span className="hidden font-normal text-muted-foreground md:inline">

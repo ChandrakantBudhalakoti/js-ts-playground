@@ -4,6 +4,7 @@ export type Language =
   | "python"
   | "c"
   | "cpp"
+  | "java"
   | "go"
   | "ruby"
   | "php"
@@ -19,7 +20,7 @@ export type ScriptLanguage = "javascript" | "typescript";
  * program compiled by Clang) loaded into the sandbox's worker.
  */
 export type RuntimeId =
-  "js" | "python" | "lua" | "ruby" | "php" | "go" | "r" | "wasi";
+  "js" | "python" | "lua" | "ruby" | "php" | "go" | "r" | "java" | "wasi";
 
 /** Runtimes that are booted from downloaded files before they can run code. */
 export type WasmRuntimeId = Exclude<RuntimeId, "js">;
@@ -107,6 +108,12 @@ export interface ConsoleEntry {
   uncaught?: false;
   /** Visual tone for system entries. */
   tone?: "success";
+  /**
+   * For a system entry, the text a friendly explanation is matched against
+   * (src/lib/friendly-errors), which stays English when the entry is shown
+   * in another language.
+   */
+  explain?: string;
 }
 
 export interface RuntimeErrorInfo {
@@ -123,6 +130,8 @@ export type RuntimeMessage =
   | { channel: string; type: "READY" }
   /** A WebAssembly runtime finished booting and waits for code. */
   | { channel: string; type: "BOOTED"; runId: string; elapsedMs: number }
+  /** A runtime that compiles in the sandbox finished compiling; the program starts. */
+  | { channel: string; type: "STARTED"; runId: string; elapsedMs: number }
   | {
       channel: string;
       type: "LOG";
@@ -181,6 +190,8 @@ export interface EditorSettings {
   timeoutMs: number;
   blockRunOnTypeErrors: boolean;
   clearConsoleOnRun: boolean;
+  /** Ask before a language's first download (its size, on mobile data). */
+  askBeforeDownload: boolean;
 }
 
 export interface CodeExample {
@@ -191,4 +202,9 @@ export interface CodeExample {
   code: string;
   /** Standard input the example expects (put in the Input panel). */
   stdin?: string;
+  /** How hard it is, for filtering (see `exampleLevel`). */
+  level?: Level;
 }
+
+/** How hard an example is. */
+export type Level = "beginner" | "intermediate" | "advanced";
