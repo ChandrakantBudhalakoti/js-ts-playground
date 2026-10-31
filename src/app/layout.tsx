@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { DisableDevToolsShortcuts } from "@/components/DisableDevToolsShortcuts";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LOAD_FAILURE_SCRIPT } from "@/lib/load-failure";
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full">
+        <DisableDevToolsShortcuts />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
