@@ -40,7 +40,7 @@
     "@playwright/test": "^1.64.1",
     "@ruby/3.4-wasm-wasi": "2.10.1",
     "@tailwindcss/turbopack": "^4",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@yowasp/clang": "22.0.0-git20542-10",
